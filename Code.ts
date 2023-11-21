@@ -50,7 +50,7 @@ function createBirthdayReminders() {
     ) {
       Logger.log(task);
       Tasks.Tasks?.patch(
-        { due: titleToDue.get(title) as string, status: 'needsAction' },
+        { due: titleToDue.get(title) as string, status: "needsAction" },
         myTasksListId,
         birthdayTaskId
       );
@@ -65,6 +65,27 @@ function createBirthdayReminders() {
     birthdayTask.due = titleToDue.get(title) as string;
     Tasks.Tasks?.insert(birthdayTask, myTasksListId);
   });
+}
+
+function moveDailyTasks() {
+  const toComeId = findTasksListIdByTitle("À venir");
+  const defaultId = "@default";
+  const endOfToday = new Date();
+  endOfToday.setUTCDate(endOfToday.getUTCDate() + 1);
+  endOfToday.setUTCSeconds(endOfToday.getUTCSeconds() - 1);
+  for (const task of Tasks.Tasks.list(toComeId, {
+    dueMax: endOfToday.toISOString(),
+    showCompleted: false,
+    showHidden: true,
+  }).items) {
+    move(task, toComeId, defaultId);
+  }
+}
+
+function move(task: GoogleAppsScript.Tasks.Schema.Task, fromId: string, toId: string) {
+  Logger.log(`Moving ${JSON.stringify(task)} from ${fromId} to ${toId}.`);
+  Tasks.Tasks.insert(task, toId);
+  Tasks.Tasks.remove(fromId, task.id);
 }
 
 function findTasksListIdByTitle(titleToFind: string) {
