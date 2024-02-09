@@ -7,6 +7,13 @@
         "version": "v1",
         "serviceId": "tasks"
       }
+    ],
+    "libraries": [
+      {
+        "userSymbol": "daygs",
+        "version": "1",
+        "libraryId": "1ShsRhHc8tgPy5wGOzUvgEhOedJUQD53m-gd8lG2MOgs-dXC_aCZn9lFB"
+      }
     ]
   },
   "exceptionLogging": "STACKDRIVER",
