@@ -31,3 +31,9 @@ const moveDailyTasks = () => {
     DailyTasks.move(task, toComeId, defaultId);
   }
 };
+
+const createDailyTasks = () => {
+  const defaultId = "@default";
+  const today = new Date();
+  TaskGeneration.generateTasks(today, defaultId);
+}
