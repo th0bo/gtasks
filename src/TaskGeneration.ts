@@ -11,39 +11,43 @@ namespace TaskGeneration {
   }>;
 
   interface TaskGenerator {
+    id: string;
     startDate: Date;
     recurrence: Recurrence;
-    task: Pick<GoogleAppsScript.Tasks.Schema.Task, "title" | "notes">;
+    task: Pick<GoogleAppsScript.Tasks.Schema.Task, "title">;
   }
 
-  const tasksGenerators: TaskGenerator[] = [
-    {
-      startDate: new Date("2024-02-09"),
-      recurrence: {},
-      task: {
-        title: "Arroser les plantes",
-        notes: "3 pchits",
-      },
-    },
-    {
-      startDate: new Date("2024-01-08"),
-      recurrence: {
-        weekDays: [0, 1, 4],
-      },
-      task: {
-        title: "Sortir le verre",
-      },
-    },
-  ];
+  export const getTasksGenerators = (generatorsListId: string) => {
+    return (
+      Tasks.Tasks?.list(generatorsListId, {
+        showCompleted: true,
+        showHidden: true,
+      }).items ?? []
+    ).map((task) => {
+      // Logger.log(task);
+      const { title, notes, due, id } = task;
+      const recurrence = JSON.parse(notes) as Recurrence;
+      return {
+        task: { title, notes },
+        startDate: new Date(due),
+        recurrence,
+        id,
+      };
+    }) as TaskGenerator[];
+  };
 
-  export const generateTasks = (today: Date, defaultId: string) => {
-    tasksGenerators.map(({ startDate, recurrence, task }) => {
+  export const generateTasks = (
+    today: Date,
+    defaultId: string,
+    tasksGenerators: TaskGenerator[]
+  ) => {
+    tasksGenerators.map(({ startDate, recurrence, task, id }) => {
       // Logger.log(startDate);
       if (checkRecurrence(today, startDate, recurrence)) {
         Logger.log(task.title);
         const newTask = Tasks.newTask();
         newTask.title = task.title;
-        newTask.notes = task.notes;
+        newTask.notes = id;
         newTask.due = today.toISOString();
         Tasks.Tasks.insert(newTask, defaultId);
       }
@@ -74,7 +78,7 @@ namespace TaskGeneration {
     const yearDayIndex = dayA.diff(dayA.startOf("year"), "days");
     const monthWeekIndex = dayA.diff(dayA.startOf("month"), "weeks");
     const monthDayIndex = dayA.date() - 1;
-    const weekDayIndex = dayA.day() - 1;
+    const weekDayIndex = dayA.day();
 
     return (
       dayA.diff(dayB, "days") % dayInterval === 0 &&

@@ -1,7 +1,6 @@
 function myFunction() {
   // reviewTasksPlot();
   // createBirthdayReminders();
-
 }
 
 function reviewTasksPlot() {
@@ -32,8 +31,10 @@ const moveDailyTasks = () => {
   }
 };
 
-const createDailyTasks = () => {
+const generateDailyTasks = () => {
+  const generatorsId = findTasksListIdByTitle("Générateurs");
   const defaultId = "@default";
   const today = new Date();
-  TaskGeneration.generateTasks(today, defaultId);
-}
+  const tasksGenerators = TaskGeneration.getTasksGenerators(generatorsId);
+  TaskGeneration.generateTasks(today, defaultId, tasksGenerators);
+};
