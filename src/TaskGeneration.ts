@@ -20,7 +20,7 @@ namespace TaskGeneration {
   export const getTasksGenerators = (generatorsListId: string) => {
     return (
       Tasks.Tasks?.list(generatorsListId, {
-        showCompleted: true,
+        showCompleted: false,
         showHidden: true,
       }).items ?? []
     ).map((task) => {
@@ -76,7 +76,9 @@ namespace TaskGeneration {
       recurrence.monthWeeks ?? Array.from({ length: 6 }).map((_v, key) => key);
 
     const yearDayIndex = dayA.diff(dayA.startOf("year"), "days");
-    const monthWeekIndex = dayA.diff(dayA.startOf("month"), "weeks");
+    const sameDayOfFirstWeekOfMonth = dayA.startOf("month").set("day", dayA.day());
+    const firstSameDayOfMonth = sameDayOfFirstWeekOfMonth.month() === dayA.month() ? sameDayOfFirstWeekOfMonth : sameDayOfFirstWeekOfMonth.add(1, "weeks");
+    const monthWeekIndex = dayA.diff(firstSameDayOfMonth, "weeks");
     const monthDayIndex = dayA.date() - 1;
     const weekDayIndex = dayA.day();
 
