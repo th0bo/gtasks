@@ -24,29 +24,29 @@ namespace BirthdayReminders {
       showCompleted: true,
       showHidden: true,
     }).items ?? []) {
-      // Logger.log(task);
+      // console.log(task);
       const { title, id: birthdayTaskId } = task;
       if (
         title !== undefined &&
         birthdayTaskId !== undefined &&
         titleToDue.has(title)
       ) {
-        Logger.log(task);
+        console.log(task);
         Tasks.Tasks?.patch(
           { due: titleToDue.get(title) as string, status: "needsAction" },
           incomingListId,
           birthdayTaskId
         );
-        Logger.log(task);
+        console.log(task);
         titleToDue.delete(title);
       }
     }
-    // Google App Script does not support for of on Map (ES5)
-    titleToDue.forEach((due, title) => {
+    
+    for (const [title, due] of titleToDue) {
       const birthdayTask = Tasks.newTask();
       birthdayTask.title = title;
-      birthdayTask.due = titleToDue.get(title) as string;
+      birthdayTask.due = due;
       Tasks.Tasks?.insert(birthdayTask, incomingListId);
-    });
+    }
   };
 }

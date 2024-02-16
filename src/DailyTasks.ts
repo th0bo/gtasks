@@ -15,7 +15,7 @@ namespace DailyTasks {
     fromId: string,
     toId: string
   ) => {
-    Logger.log(`Moving ${JSON.stringify(task)} from ${fromId} to ${toId}.`);
+    console.log(`Moving ${JSON.stringify(task)} from ${fromId} to ${toId}.`);
     Tasks.Tasks.insert(task, toId);
     Tasks.Tasks.remove(fromId, task.id);
   };

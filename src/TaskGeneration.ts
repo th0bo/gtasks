@@ -24,7 +24,7 @@ namespace TaskGeneration {
         showHidden: true,
       }).items ?? []
     ).map((task) => {
-      // Logger.log(task);
+      // console.log(task);
       const { title, notes, due, id } = task;
       const recurrence = JSON.parse(notes) as Recurrence;
       return {
@@ -42,9 +42,9 @@ namespace TaskGeneration {
     tasksGenerators: TaskGenerator[]
   ) => {
     tasksGenerators.map(({ startDate, recurrence, task, id }) => {
-      // Logger.log(startDate);
+      // console.log(startDate);
       if (checkRecurrence(today, startDate, recurrence)) {
-        Logger.log(task.title);
+        console.log(task.title);
         const newTask = Tasks.newTask();
         newTask.title = task.title;
         newTask.notes = id;

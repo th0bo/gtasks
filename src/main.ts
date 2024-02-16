@@ -1,6 +1,9 @@
 function myFunction() {
   // reviewTasksPlot();
   // createBirthdayReminders();
+  let a = true;
+  a &&= false;
+  console.log(a);
 }
 
 function reviewTasksPlot() {
@@ -8,13 +11,13 @@ function reviewTasksPlot() {
   const reviewTasks =
     Tasks.Tasks?.list(reviewListId, { showCompleted: true, showHidden: true })
       .items ?? [];
-  Logger.log(reviewTasks.length);
+  console.log(reviewTasks.length);
   for (const { title, id, completed, ...rest } of reviewTasks) {
-    Logger.log(`${title} - ${id} - ${completed} - ${JSON.stringify(rest)}`);
+    console.log(`${title} - ${id} - ${completed} - ${JSON.stringify(rest)}`);
     //Tasks.Tasks?.patch({ notes: 'hello world' }, reviewListId, id as string);
   }
   for (const calendar of CalendarApp.getAllCalendars()) {
-    Logger.log(`${calendar.getName()} - ${calendar.getId()}`);
+    console.log(`${calendar.getName()} - ${calendar.getId()}`);
   }
 }
 
