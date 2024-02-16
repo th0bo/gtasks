@@ -10,12 +10,11 @@ namespace TaskGeneration {
     yearDays: number[];
   }>;
 
-  interface TaskGenerator {
+  type TaskGenerator = {
     id: string;
     startDate: Date;
-    recurrence: Recurrence;
-    task: Pick<GoogleAppsScript.Tasks.Schema.Task, "title">;
-  }
+    title: string;
+  } & Recurrence;
 
   export const getTasksGenerators = (generatorsListId: string) => {
     return (
@@ -28,10 +27,10 @@ namespace TaskGeneration {
       const { title, notes, due, id } = task;
       const recurrence = JSON.parse(notes) as Recurrence;
       return {
-        task: { title, notes },
-        startDate: new Date(due),
-        recurrence,
         id,
+        startDate: new Date(due),
+        title,
+        ...recurrence,
       };
     }) as TaskGenerator[];
   };
@@ -41,12 +40,12 @@ namespace TaskGeneration {
     defaultId: string,
     tasksGenerators: TaskGenerator[]
   ) => {
-    tasksGenerators.map(({ startDate, recurrence, task, id }) => {
+    tasksGenerators.map(({ startDate, title, id, ...recurrence }) => {
       // console.log(startDate);
       if (checkRecurrence(today, startDate, recurrence)) {
-        console.log(task.title);
+        console.log(title);
         const newTask = Tasks.newTask();
-        newTask.title = task.title;
+        newTask.title = title;
         newTask.notes = id;
         newTask.due = today.toISOString();
         Tasks.Tasks.insert(newTask, defaultId);
