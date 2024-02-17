@@ -16,6 +16,13 @@ namespace TaskGeneration {
     title: string;
   } & Recurrence;
 
+  const getTasks = () => {
+    if (Tasks.Tasks === undefined) {
+      throw new Error(`Tasks API is not available.`);
+    }
+    return Tasks.Tasks;
+  }
+
   export const getTasksGenerators = (generatorsListId: string) => {
     return (
       Tasks.Tasks?.list(generatorsListId, {
@@ -25,10 +32,10 @@ namespace TaskGeneration {
     ).map((task) => {
       // console.log(task);
       const { title, notes, due, id } = task;
-      const recurrence = JSON.parse(notes) as Recurrence;
+      const recurrence = JSON.parse(notes ?? "{}") as Recurrence;
       return {
         id,
-        startDate: new Date(due),
+        startDate: due !== undefined ? new Date(due) : new Date(),
         title,
         ...recurrence,
       };
@@ -48,7 +55,7 @@ namespace TaskGeneration {
         newTask.title = title;
         newTask.notes = id;
         newTask.due = today.toISOString();
-        Tasks.Tasks.insert(newTask, defaultId);
+        getTasks().insert(newTask, defaultId);
       }
     });
   };
