@@ -22,14 +22,6 @@ namespace DriveSheets {
     return filesIterator.next();
   };
 
-  const getSheet = (spreadsheet: GoogleAppsScript.Sheets.Schema.Spreadsheet, sheetIndex: number = 0) => {
-    const sheet = spreadsheet.sheets?.[sheetIndex];
-    if (sheet == undefined) {
-      throw new Error(`No sheet for index ${sheetIndex} in spreadsheet ${spreadsheet.spreadsheetId}.`);
-    }
-    return sheet;
-  };
-
   export const store = (name: string, values: [string, string, string, string][]) => {
     const file = getFileByName(name);
     getSpreadsheetsValues().append({ values }, file.getId(), "Feuille 1", {
@@ -40,8 +32,15 @@ namespace DriveSheets {
   export const loadContent = (name: string) => {
     const file = getFileByName(name);
     const Values = getSpreadsheetsValues();
-    const values = Values.get(file.getId(), "Feuille 1!A2:D", {
+    const values = Values.get(file.getId(), "Feuille 1!A2:E", {
       valueRenderOption: "UNFORMATTED_VALUE",
-    }).values;
+    }).values as [string, string, string, string, string][];
+    return values.map(([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
+      id,
+      startDate: new Date(startIsoDate),
+      title,
+      taskListId,
+      ...(JSON.parse(recurrenceJson)),
+    })) as TaskGeneration.TaskGenerator[];
   };
 }

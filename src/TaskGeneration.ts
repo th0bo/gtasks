@@ -10,10 +10,11 @@ namespace TaskGeneration {
     yearDays: number[];
   }>;
 
-  type TaskGenerator = {
+  export type TaskGenerator = {
     id: string;
     startDate: Date;
     title: string;
+    taskListId?: string;
   } & Recurrence;
 
   const getTasks = () => {
@@ -23,14 +24,20 @@ namespace TaskGeneration {
     return Tasks.Tasks;
   }
 
+  export const getTasklists = () => {
+    if (Tasks.Tasks === undefined) {
+      throw new Error(`Tasklists API is not available.`);
+    }
+    return Tasks.Tasklists;
+  }
+
   export const getTasksGenerators = (generatorsListId: string) => {
     return (
-      Tasks.Tasks?.list(generatorsListId, {
+      getTasks().list(generatorsListId, {
         showCompleted: false,
         showHidden: true,
       }).items ?? []
     ).map((task) => {
-      // console.log(task);
       const { title, notes, due, id } = task;
       const recurrence = JSON.parse(notes ?? "{}") as Recurrence;
       return {
@@ -44,18 +51,17 @@ namespace TaskGeneration {
 
   export const generateTasks = (
     today: Date,
-    defaultId: string,
     tasksGenerators: TaskGenerator[]
   ) => {
-    tasksGenerators.map(({ startDate, title, id, ...recurrence }) => {
-      // console.log(startDate);
+    const defaultId = "@default";
+    tasksGenerators.map(({ startDate, title, id, taskListId, ...recurrence }) => {
       if (checkRecurrence(today, startDate, recurrence)) {
         console.log(title);
         const newTask = Tasks.newTask();
         newTask.title = title;
         newTask.notes = id;
         newTask.due = today.toISOString();
-        getTasks().insert(newTask, defaultId);
+        getTasks().insert(newTask, taskListId ?? defaultId);
       }
     });
   };
