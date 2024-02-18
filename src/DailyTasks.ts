@@ -3,7 +3,7 @@ namespace DailyTasks {
     const endOfToday = new Date();
     endOfToday.setUTCDate(endOfToday.getUTCDate() + 1);
     endOfToday.setUTCSeconds(endOfToday.getUTCSeconds() - 1);
-    return Tasks.Tasks.list(toComeId, {
+    return TasksTasks.getTasks().list(toComeId, {
       dueMax: endOfToday.toISOString(),
       showCompleted: false,
       showHidden: true,
@@ -16,7 +16,7 @@ namespace DailyTasks {
     toId: string
   ) => {
     console.log(`Moving ${JSON.stringify(task)} from ${fromId} to ${toId}.`);
-    Tasks.Tasks.insert(task, toId);
-    Tasks.Tasks.remove(fromId, task.id);
+    TasksTasks.getTasks().insert(task, toId);
+    TasksTasks.getTasks().remove(fromId, task.id as string);
   };
 }

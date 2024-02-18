@@ -19,8 +19,8 @@ namespace BirthdayReminders {
   };
 
   export const storeDataAsTasks = (titleToDue: Map<string, string>) => {
-    const incomingListId = findTasksListIdByTitle("À venir") as string;
-    for (const task of Tasks.Tasks?.list(incomingListId, {
+    const incomingListId = TasksList.findTasksListIdByTitle("À venir") as string;
+    for (const task of TasksTasks.getTasks().list(incomingListId, {
       showCompleted: true,
       showHidden: true,
     }).items ?? []) {
@@ -32,7 +32,7 @@ namespace BirthdayReminders {
         titleToDue.has(title)
       ) {
         console.log(task);
-        Tasks.Tasks?.patch(
+        TasksTasks.getTasks().patch(
           { due: titleToDue.get(title) as string, status: "needsAction" },
           incomingListId,
           birthdayTaskId
@@ -46,7 +46,7 @@ namespace BirthdayReminders {
       const birthdayTask = Tasks.newTask();
       birthdayTask.title = title;
       birthdayTask.due = due;
-      Tasks.Tasks?.insert(birthdayTask, incomingListId);
+      TasksTasks.getTasks().insert(birthdayTask, incomingListId);
     }
   };
 }

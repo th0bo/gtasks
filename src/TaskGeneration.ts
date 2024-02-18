@@ -17,23 +17,15 @@ namespace TaskGeneration {
     taskListId?: string;
   } & Recurrence;
 
-  const getTasks = () => {
-    if (Tasks.Tasks === undefined) {
-      throw new Error(`Tasks API is not available.`);
-    }
-    return Tasks.Tasks;
-  }
-
-  export const getTasklists = () => {
-    if (Tasks.Tasks === undefined) {
-      throw new Error(`Tasklists API is not available.`);
-    }
-    return Tasks.Tasklists;
-  }
-
+  /**
+   *
+   * @deprecated
+   * @param generatorsListId
+   * @returns
+   */
   export const getTasksGenerators = (generatorsListId: string) => {
     return (
-      getTasks().list(generatorsListId, {
+      TasksTasks.getTasks().list(generatorsListId, {
         showCompleted: false,
         showHidden: true,
       }).items ?? []
@@ -54,16 +46,18 @@ namespace TaskGeneration {
     tasksGenerators: TaskGenerator[]
   ) => {
     const defaultId = "@default";
-    tasksGenerators.map(({ startDate, title, id, taskListId, ...recurrence }) => {
-      if (checkRecurrence(today, startDate, recurrence)) {
-        console.log(title);
-        const newTask = Tasks.newTask();
-        newTask.title = title;
-        newTask.notes = id;
-        newTask.due = today.toISOString();
-        getTasks().insert(newTask, taskListId ?? defaultId);
+    tasksGenerators.map(
+      ({ startDate, title, id, taskListId, ...recurrence }) => {
+        if (checkRecurrence(today, startDate, recurrence)) {
+          console.log(title);
+          const newTask = Tasks.newTask();
+          newTask.title = title;
+          newTask.notes = id;
+          newTask.due = today.toISOString();
+          TasksTasks.getTasks().insert(newTask, taskListId ?? defaultId);
+        }
       }
-    });
+    );
   };
 
   const checkRecurrence = (
@@ -88,8 +82,13 @@ namespace TaskGeneration {
       recurrence.monthWeeks ?? Array.from({ length: 6 }).map((_v, key) => key);
 
     const yearDayIndex = dayA.diff(dayA.startOf("year"), "days");
-    const sameDayOfFirstWeekOfMonth = dayA.startOf("month").set("day", dayA.day());
-    const firstSameDayOfMonth = sameDayOfFirstWeekOfMonth.month() === dayA.month() ? sameDayOfFirstWeekOfMonth : sameDayOfFirstWeekOfMonth.add(1, "weeks");
+    const sameDayOfFirstWeekOfMonth = dayA
+      .startOf("month")
+      .set("day", dayA.day());
+    const firstSameDayOfMonth =
+      sameDayOfFirstWeekOfMonth.month() === dayA.month()
+        ? sameDayOfFirstWeekOfMonth
+        : sameDayOfFirstWeekOfMonth.add(1, "weeks");
     const monthWeekIndex = dayA.diff(firstSameDayOfMonth, "weeks");
     const monthDayIndex = dayA.date() - 1;
     const weekDayIndex = dayA.day();

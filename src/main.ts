@@ -6,12 +6,12 @@ function myFunction() {
 function reviewTasksPlot() {
   const reviewListId = TasksList.findTasksListIdByTitle("Bilans") as string;
   const reviewTasks =
-    Tasks.Tasks?.list(reviewListId, { showCompleted: true, showHidden: true })
+    TasksTasks.getTasks().list(reviewListId, { showCompleted: true, showHidden: true })
       .items ?? [];
   console.log(reviewTasks.length);
   for (const { title, id, completed, ...rest } of reviewTasks) {
     console.log(`${title} - ${id} - ${completed} - ${JSON.stringify(rest)}`);
-    //Tasks.Tasks?.patch({ notes: 'hello world' }, reviewListId, id as string);
+    // TasksTasks.getTasks().patch({ notes: 'hello world' }, reviewListId, id as string);
   }
   for (const calendar of CalendarApp.getAllCalendars()) {
     console.log(`${calendar.getName()} - ${calendar.getId()}`);
@@ -33,7 +33,15 @@ const moveDailyTasks = () => {
 
 const generateDailyTasks = () => {
   const today = new Date();
-  const tasksGenerators = DriveSheets.loadContent("Tasks Generators");
+  const tasksGenerators = DriveSheets.loadGenerators("Tasks Generators").map(
+    ([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
+      id,
+      startDate: new Date(startIsoDate),
+      title,
+      taskListId,
+      ...JSON.parse(recurrenceJson),
+    })
+  );
   console.log(tasksGenerators);
   TaskGeneration.generateTasks(today, tasksGenerators);
 };
@@ -43,13 +51,14 @@ const transferTasksGenerators = () => {
     "Générateurs"
   ) as string;
   const tasksGenerators = TaskGeneration.getTasksGenerators(generatorsId);
-  DriveSheets.store(
+  DriveSheets.saveGenerators(
     "Tasks Generators",
     tasksGenerators.map(({ id, startDate, title, ...rest }) => [
       id,
       startDate.toISOString(),
       title,
       JSON.stringify(rest),
+      "",
     ])
   );
 };
