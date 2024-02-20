@@ -6,8 +6,10 @@ function myFunction() {
 function reviewTasksPlot() {
   const reviewListId = TasksList.findTasksListIdByTitle("Bilans") as string;
   const reviewTasks =
-    TasksTasks.getTasks().list(reviewListId, { showCompleted: true, showHidden: true })
-      .items ?? [];
+    TasksTasks.getTasks().list(reviewListId, {
+      showCompleted: true,
+      showHidden: true,
+    }).items ?? [];
   console.log(reviewTasks.length);
   for (const { title, id, completed, ...rest } of reviewTasks) {
     console.log(`${title} - ${id} - ${completed} - ${JSON.stringify(rest)}`);
@@ -61,4 +63,32 @@ const transferTasksGenerators = () => {
       "",
     ])
   );
+};
+
+const moveCompleted = () => {
+  const defaultListId = "@default";
+  const reviewListId = TasksList.findTasksListIdByTitle("Bilans") as string;
+  const completedListId = TasksList.findTasksListIdByTitle(
+    "Achevées"
+  ) as string;
+  (
+    TasksTasks.getTasks().list(defaultListId, {
+      showCompleted: true,
+      showHidden: true,
+    }).items ?? []
+  )
+    .filter(({ completed }) => completed)
+    .map((task) => {
+      DailyTasks.move(task, defaultListId, completedListId);
+    });
+  (
+    TasksTasks.getTasks().list(reviewListId, {
+      showCompleted: true,
+      showHidden: true,
+    }).items ?? []
+  )
+    .filter(({ completed }) => completed)
+    .map((task) => {
+      DailyTasks.move(task, reviewListId, completedListId);
+    });
 };
