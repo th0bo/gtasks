@@ -1,5 +1,5 @@
 namespace TasksList {
-  export const getTasklists = () => {
+  const getTasklists = () => {
     if (Tasks.Tasklists === undefined) {
       throw new Error(`Tasklists API is not available.`);
     }
