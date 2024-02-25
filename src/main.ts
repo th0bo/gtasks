@@ -45,7 +45,9 @@ const generateDailyTasks = () => {
     })
   );
   console.log(tasksGenerators);
-  TaskGeneration.generateTasks(today, tasksGenerators);
+  const tasksData = TaskGeneration.generateTasks(today, tasksGenerators);
+  console.log(tasksData);
+  TaskGeneration.createTasks(tasksData);
 };
 
 const transferTasksGenerators = () => {

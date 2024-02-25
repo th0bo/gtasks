@@ -41,23 +41,42 @@ namespace TaskGeneration {
     }) as TaskGenerator[];
   };
 
+  type TaskData = {
+    title: string;
+    notes: string;
+    due: string;
+    taskListId?: string;
+  };
+
   export const generateTasks = (
     today: Date,
     tasksGenerators: TaskGenerator[]
   ) => {
+    return tasksGenerators
+      .filter(({ startDate, ...recurrence }) =>
+        checkRecurrence(today, startDate, recurrence)
+      )
+      .map(
+        ({ title, id, taskListId }) =>
+          ({
+            title,
+            notes: id,
+            taskListId,
+            due: today.toISOString(),
+          } as TaskData)
+      );
+  };
+
+  export const createTasks = (tasksData: TaskData[]) => {
     const defaultId = "@default";
-    tasksGenerators.map(
-      ({ startDate, title, id, taskListId, ...recurrence }) => {
-        if (checkRecurrence(today, startDate, recurrence)) {
-          console.log(title);
-          const newTask = Tasks.newTask();
-          newTask.title = title;
-          newTask.notes = id;
-          newTask.due = today.toISOString();
-          TasksTasks.getTasks().insert(newTask, taskListId ?? defaultId);
-        }
+    for (const { title, notes, taskListId, due } of tasksData) {
+      try {
+        const newTask = { ...Tasks.newTask(), title, notes, due };
+        TasksTasks.getTasks().insert(newTask, taskListId ?? defaultId);
+      } catch (e) {
+        console.error(e);
       }
-    );
+    }
   };
 
   const checkRecurrence = (
