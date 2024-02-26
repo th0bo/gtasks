@@ -1,6 +1,4 @@
 namespace DriveSheets {
-  type Line = [string, string, string, string, string];
-
   const getSpreadsheets = () => {
     if (Sheets.Spreadsheets === undefined) {
       throw new Error("Spreadsheets API is not available.");
@@ -21,21 +19,24 @@ namespace DriveSheets {
     if (!filesIterator.hasNext()) {
       throw new Error(`No file found for name ${name}.`);
     }
-    return filesIterator.next();
+    const file = filesIterator.next();
+    if (filesIterator.hasNext()) {
+      throw new Error(`Multiple files found for name ${name}.`);
+    }
+    return file;
   };
 
-  export const saveGenerators = (name: string, values: Line[]) => {
-    const file = getFileByName(name);
-    getSpreadsheetsValues().append({ values }, file.getId(), "Feuille 1", {
+  export const save = (fileName: string, values: string[][], range: string) => {
+    const file = getFileByName(fileName);
+    getSpreadsheetsValues().append({ values }, file.getId(), range, {
       valueInputOption: "USER_ENTERED",
     });
-  };
+  }
 
-  export const loadGenerators = (name: string) => {
-    const file = getFileByName(name);
-    const Values = getSpreadsheetsValues();
-    return Values.get(file.getId(), "Feuille 1!A2:E", {
+  export const load = (fileName: string, range: string) => {
+    const file = getFileByName(fileName);
+    return getSpreadsheetsValues().get(file.getId(), range, {
       valueRenderOption: "UNFORMATTED_VALUE",
-    }).values as Line[];
-  };
+    }).values as string[][];
+  }
 }

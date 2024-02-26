@@ -35,7 +35,7 @@ const moveDailyTasks = () => {
 
 const generateDailyTasks = () => {
   const today = new Date();
-  const tasksGenerators = DriveSheets.loadGenerators("Tasks Generators").map(
+  const tasksGenerators = GeneratorsDriveSheets.load().map(
     ([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
       id,
       startDate: new Date(startIsoDate),
@@ -55,16 +55,13 @@ const transferTasksGenerators = () => {
     "Générateurs"
   ) as string;
   const tasksGenerators = TaskGeneration.getTasksGenerators(generatorsId);
-  DriveSheets.saveGenerators(
-    "Tasks Generators",
-    tasksGenerators.map(({ id, startDate, title, ...rest }) => [
-      id,
-      startDate.toISOString(),
-      title,
-      JSON.stringify(rest),
-      "",
-    ])
-  );
+  GeneratorsDriveSheets.save(tasksGenerators.map(({ id, startDate, title, ...rest }) => [
+    id,
+    startDate.toISOString(),
+    title,
+    JSON.stringify(rest),
+    "",
+  ]));
 };
 
 const moveCompleted = () => {
