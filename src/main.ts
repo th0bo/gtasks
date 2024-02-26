@@ -1,6 +1,7 @@
 function myFunction() {
   // reviewTasksPlot();
   // createBirthdayReminders();
+  console.log(GeneratorsDriveSheets.load());
 }
 
 function reviewTasksPlot() {

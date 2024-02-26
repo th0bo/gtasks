@@ -11,6 +11,9 @@ devDependencies:
   '@types/google-apps-script':
     specifier: ^1.0.74
     version: 1.0.78
+  drive-sheets:
+    specifier: github:th0bo/drive-sheets
+    version: github.com/th0bo/drive-sheets/4a71f67c7ef3c840c56755dc223d98eb44c47345
 
 packages:
 
@@ -1748,4 +1751,10 @@ packages:
   /yocto-queue@1.0.0:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
+    dev: true
+
+  github.com/th0bo/drive-sheets/4a71f67c7ef3c840c56755dc223d98eb44c47345:
+    resolution: {tarball: https://codeload.github.com/th0bo/drive-sheets/tar.gz/4a71f67c7ef3c840c56755dc223d98eb44c47345}
+    name: drive-sheets
+    version: 0.1.0
     dev: true
