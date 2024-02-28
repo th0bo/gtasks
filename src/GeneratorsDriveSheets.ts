@@ -1,3 +1,7 @@
+/// <reference types="drive-sheets" />
+
+declare const DriveSheets: DriveSheetsLibrary;
+
 namespace GeneratorsDriveSheets {
   type Line = [string, string, string, string, string];
 
