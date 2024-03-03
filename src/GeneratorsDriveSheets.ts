@@ -9,10 +9,10 @@ namespace GeneratorsDriveSheets {
   const range = "Feuille 1!A2:E";
 
   export const load = () => {
-    return DriveSheets.load(fileName, range) as Line[];
+    return DriveSheets.load({ fileName, range }) as Line[];
   }
 
   export const save = (values: Line[]) => {
-    DriveSheets.save(fileName, values, range);
+    return DriveSheets.save({ fileName, values, range });
   }
 }

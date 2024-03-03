@@ -1,37 +1,37 @@
 {
   "timeZone": "Europe/Paris",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
   "dependencies": {
     "enabledAdvancedServices": [
       {
         "userSymbol": "Tasks",
-        "version": "v1",
-        "serviceId": "tasks"
+        "serviceId": "tasks",
+        "version": "v1"
       },
       {
         "userSymbol": "Drive",
-        "version": "v3",
-        "serviceId": "drive"
+        "serviceId": "drive",
+        "version": "v3"
       },
       {
         "userSymbol": "Sheets",
-        "version": "v4",
-        "serviceId": "sheets"
+        "serviceId": "sheets",
+        "version": "v4"
       }
     ],
     "libraries": [
       {
         "userSymbol": "DayGs",
-        "version": "1",
-        "libraryId": "1ShsRhHc8tgPy5wGOzUvgEhOedJUQD53m-gd8lG2MOgs-dXC_aCZn9lFB"
+        "libraryId": "1ShsRhHc8tgPy5wGOzUvgEhOedJUQD53m-gd8lG2MOgs-dXC_aCZn9lFB",
+        "version": "1"
       },
       {
         "userSymbol": "DriveSheets",
-        "version": "0",
         "libraryId": "1avYeufvXAHoaIowQWOhTGe8GOW3bxaQXp16oWzXTfyBjqCE3yKupJntz",
+        "version": "0",
         "developmentMode": true
       }
     ]
-  },
-  "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
+  }
 }
