@@ -6,15 +6,23 @@ namespace TasksList {
     return Tasks.Tasklists;
   };
 
-  export const findTasksListIdByTitle = (titleToFind: string) => {
+  const listTitleToListId = new Map<string, string>();
+
+  const initListTitleToListId = () => {
     const taskLists = getTasklists().list().items ?? [];
-    let foundId: string | undefined;
     for (const { title, id } of taskLists) {
-      // console.log(`${title} - ${id}`);
-      if (title === titleToFind) {
-        foundId = id;
+      if (title !== undefined && id !== undefined) {
+        listTitleToListId.set(title, id);
       }
     }
-    return foundId;
-  };
+  }
+
+  export const getListIdByListTitle = (title: string) => {
+    let listId = listTitleToListId.get(title);
+    if (listId !== undefined) {
+      return listId;
+    }
+    initListTitleToListId();
+    return listTitleToListId.get(title);
+  }
 }

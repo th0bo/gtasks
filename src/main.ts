@@ -5,7 +5,7 @@ function myFunction() {
 }
 
 function reviewTasksPlot() {
-  const reviewListId = TasksList.findTasksListIdByTitle("Bilans") as string;
+  const reviewListId = TasksList.getListIdByListTitle("Bilans") as string;
   const reviewTasks =
     TasksTasks.getTasks().list(reviewListId, {
       showCompleted: true,
@@ -27,9 +27,9 @@ const createBirthdayReminders = () => {
 };
 
 const moveDailyTasks = () => {
-  const toComeId = TasksList.findTasksListIdByTitle("À venir") as string;
+  const toComeId = TasksList.getListIdByListTitle("À venir") as string;
   const defaultId = "@default";
-  for (const task of DailyTasks.list(toComeId, defaultId) ?? []) {
+  for (const task of DailyTasks.list(toComeId) ?? []) {
     DailyTasks.move(task, toComeId, defaultId);
   }
 };
@@ -52,7 +52,7 @@ const generateDailyTasks = () => {
 };
 
 const transferTasksGenerators = () => {
-  const generatorsId = TasksList.findTasksListIdByTitle(
+  const generatorsId = TasksList.getListIdByListTitle(
     "Générateurs"
   ) as string;
   const tasksGenerators = TaskGeneration.getTasksGenerators(generatorsId);
@@ -67,8 +67,8 @@ const transferTasksGenerators = () => {
 
 const moveCompleted = () => {
   const defaultListId = "@default";
-  const reviewListId = TasksList.findTasksListIdByTitle("Bilans") as string;
-  const completedListId = TasksList.findTasksListIdByTitle(
+  const reviewListId = TasksList.getListIdByListTitle("Bilans") as string;
+  const completedListId = TasksList.getListIdByListTitle(
     "Achevées"
   ) as string;
   (

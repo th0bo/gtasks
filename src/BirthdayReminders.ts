@@ -19,7 +19,7 @@ namespace BirthdayReminders {
   };
 
   export const storeDataAsTasks = (titleToDue: Map<string, string>) => {
-    const incomingListId = TasksList.findTasksListIdByTitle("À venir") as string;
+    const incomingListId = TasksList.getListIdByListTitle("À venir") as string;
     for (const task of TasksTasks.getTasks().list(incomingListId, {
       showCompleted: true,
       showHidden: true,

@@ -1,5 +1,5 @@
 namespace DailyTasks {
-  export const list = (toComeId: string, defaultId: string) => {
+  export const list = (toComeId: string) => {
     const endOfToday = new Date();
     endOfToday.setUTCDate(endOfToday.getUTCDate() + 1);
     endOfToday.setUTCSeconds(endOfToday.getUTCSeconds() - 1);
