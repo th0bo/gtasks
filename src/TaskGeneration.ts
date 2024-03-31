@@ -1,5 +1,5 @@
 namespace TaskGeneration {
-  type Recurrence = Partial<{
+  export type Recurrence = Partial<{
     dayInterval: number;
     weekInterval: number;
     weekDays: number[];
@@ -14,7 +14,7 @@ namespace TaskGeneration {
     id: string;
     startDate: Date;
     title: string;
-    taskListId?: string;
+    taskListId: string;
   } & Recurrence;
 
   /**
@@ -45,16 +45,16 @@ namespace TaskGeneration {
     title: string;
     notes: string;
     due: string;
-    taskListId?: string;
+    taskListId: string;
   };
 
   export const generateTasks = (
-    today: Date,
+    date: Date,
     tasksGenerators: TaskGenerator[]
   ) => {
     return tasksGenerators
       .filter(({ startDate, ...recurrence }) =>
-        checkRecurrence(today, startDate, recurrence)
+        checkRecurrence(date, startDate, recurrence)
       )
       .map(
         ({ title, id, taskListId }) =>
@@ -62,17 +62,16 @@ namespace TaskGeneration {
             title,
             notes: id,
             taskListId,
-            due: today.toISOString(),
+            due: date.toISOString(),
           } as TaskData)
       );
   };
 
   export const createTasks = (tasksData: TaskData[]) => {
-    const defaultId = "@default";
     for (const { title, notes, taskListId, due } of tasksData) {
       try {
         const newTask = { ...Tasks.newTask(), title, notes, due };
-        TasksTasks.getTasks().insert(newTask, taskListId ?? defaultId);
+        TasksTasks.getTasks().insert(newTask, taskListId);
       } catch (e) {
         console.error(e);
       }

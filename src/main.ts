@@ -4,6 +4,30 @@ function myFunction() {
   console.log(GeneratorsDriveSheets.load());
 }
 
+/**
+ * A Google Apps Script trigger runs this function between
+ * 02:00 and 03:00 AM. 
+ */
+const runEarly = () => {
+  const errors: any[] = [];
+  for (const executeStep of [
+    moveCompleted,
+    generateDailyTasks,
+    generateTomorrowTasks,
+    moveDailyTasks,
+  ]) {
+    try {
+      executeStep();
+    } catch (e) {
+      errors.push(e);
+      console.error(e);
+    }
+  }
+  if (errors.length > 0) {
+    throw errors;
+  }
+};
+
 function reviewTasksPlot() {
   const reviewListId = TasksList.getListIdByListTitle("Bilans") as string;
   const reviewTasks =
@@ -35,6 +59,7 @@ const moveDailyTasks = () => {
 };
 
 const generateDailyTasks = () => {
+  const defaultId = "@default";
   const today = new Date();
   const tasksGenerators = GeneratorsDriveSheets.load().map(
     ([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
@@ -44,9 +69,34 @@ const generateDailyTasks = () => {
       taskListId,
       ...JSON.parse(recurrenceJson),
     })
+  ).filter(
+    ({ taskListId }) => taskListId !== defaultId
   );
   console.log(tasksGenerators);
   const tasksData = TaskGeneration.generateTasks(today, tasksGenerators);
+  console.log(tasksData);
+  TaskGeneration.createTasks(tasksData);
+};
+
+const generateTomorrowTasks = () => {
+  const toComeId = TasksList.getListIdByListTitle("À venir") as string;
+  const defaultId = "@default";
+  const tomorrow = dayjs(new Date()).add(1, "day").toDate();
+  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(
+    ([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
+      id,
+      startDate: new Date(startIsoDate),
+      title,
+      taskListId,
+      ...(JSON.parse(recurrenceJson) as TaskGeneration.Recurrence),
+    }) as TaskGeneration.TaskGenerator
+  ).filter(
+    ({ taskListId }) => taskListId === defaultId
+  ).map(
+    ({ taskListId, ...rest }) => ({ ...rest, taskListId: toComeId })
+  );
+  console.log(tasksGenerators);
+  const tasksData = TaskGeneration.generateTasks(tomorrow, tasksGenerators);
   console.log(tasksData);
   TaskGeneration.createTasks(tasksData);
 };
