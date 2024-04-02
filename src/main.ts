@@ -13,7 +13,7 @@ const runEarly = () => {
   for (const executeStep of [
     moveCompleted,
     generateDailyTasks,
-    generateTomorrowTasks,
+    generateTomorrowDefaultTasks,
     moveDailyTasks,
   ]) {
     try {
@@ -78,10 +78,9 @@ const generateDailyTasks = () => {
   TaskGeneration.createTasks(tasksData);
 };
 
-const generateTomorrowTasks = () => {
+const generateDefaultTasks = (date: Date) => {
   const toComeId = TasksList.getListIdByListTitle("À venir") as string;
   const defaultId = "@default";
-  const tomorrow = dayjs(new Date()).add(1, "day").toDate();
   const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(
     ([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
       id,
@@ -96,10 +95,23 @@ const generateTomorrowTasks = () => {
     ({ taskListId, ...rest }) => ({ ...rest, taskListId: toComeId })
   );
   console.log(tasksGenerators);
-  const tasksData = TaskGeneration.generateTasks(tomorrow, tasksGenerators);
+  const tasksData = TaskGeneration.generateTasks(date, tasksGenerators);
   console.log(tasksData);
   TaskGeneration.createTasks(tasksData);
+}
+
+const generateTomorrowDefaultTasks = () => {
+  const tomorrow = dayjs(new Date()).add(1, "day").toDate();
+  generateDefaultTasks(tomorrow);
 };
+
+const generateNthDayDefaultTasks = () => {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  /** YYYY/MM/DD format */
+  const offset = scriptProperties.getProperty("nthDay") as string;
+  const date = dayjs(new Date()).add(Number(offset), "day").toDate();
+  generateDefaultTasks(date);
+}
 
 const transferTasksGenerators = () => {
   const generatorsId = TasksList.getListIdByListTitle(
