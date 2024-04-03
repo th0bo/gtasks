@@ -58,16 +58,36 @@ const moveDailyTasks = () => {
   }
 };
 
+const removeNonPersistentCompletedTasks = () => {
+  const listId = TasksList.getListIdByListTitle("Achevées") as string;
+  const completedTasks = TasksTasks.listAllTasks(listId, { 
+    showCompleted: true,
+    showHidden: true,
+  });
+  
+  const nonPersistentIds: string[] = GeneratorsDriveSheets.load().filter(
+    ([, , , , , persistent]) => !persistent
+  ).map(
+    ([id]) => id
+  );
+  for (const { id, title, notes } of completedTasks) {
+    if (id !== undefined && notes !== undefined && nonPersistentIds.includes(notes)) {
+      TasksTasks.getTasks().remove(listId, id);
+    }
+  }
+}
+
 const generateDailyTasks = () => {
   const defaultId = "@default";
   const today = new Date();
-  const tasksGenerators = GeneratorsDriveSheets.load().map(
-    ([id, startIsoDate, title, recurrenceJson, taskListId]) => ({
+  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(
+    ([id, startIsoDate, title, recurrenceJson, taskListId, persistent]) => ({
       id,
       startDate: new Date(startIsoDate),
       title,
       taskListId,
       ...JSON.parse(recurrenceJson),
+      persistent,
     })
   ).filter(
     ({ taskListId }) => taskListId !== defaultId
@@ -124,6 +144,7 @@ const transferTasksGenerators = () => {
     title,
     JSON.stringify(rest),
     "",
+    true,
   ]));
 };
 

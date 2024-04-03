@@ -3,7 +3,7 @@
 declare const DriveSheets: DriveSheetsLibrary;
 
 namespace GeneratorsDriveSheets {
-  type Line = [string, string, string, string, string];
+  type Line = [string, string, string, string, string, boolean];
 
   const scriptProperties = PropertiesService.getScriptProperties();
   const fileName = scriptProperties.getProperty("generatorsFileName") as string;

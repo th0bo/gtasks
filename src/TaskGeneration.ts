@@ -15,6 +15,7 @@ namespace TaskGeneration {
     startDate: Date;
     title: string;
     taskListId: string;
+    persistent: boolean;
   } & Recurrence;
 
   /**
