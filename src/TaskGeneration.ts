@@ -49,6 +49,14 @@ namespace TaskGeneration {
     taskListId: string;
   };
 
+  export const composeTaskId = ({ generatorId, date }: { generatorId: string, date: Date }) => [generatorId, date.toISOString()].join("_");
+  export const decomposeTaskId = (taskId: string) => {
+    const [generatorId, isoDate] = taskId.split("_") as [string, string];
+    const date = new Date(isoDate);
+    return { generatorId, date };
+  }
+  export const isTaskChild = (taskId: string, generatorId: string) => TaskGeneration.decomposeTaskId(taskId).generatorId === generatorId;
+
   export const generateTasks = (
     date: Date,
     tasksGenerators: TaskGenerator[]
@@ -58,13 +66,13 @@ namespace TaskGeneration {
         checkRecurrence(date, startDate, recurrence)
       )
       .map(
-        ({ title, id, taskListId }) =>
-          ({
-            title,
-            notes: id,
-            taskListId,
-            due: date.toISOString(),
-          } as TaskData)
+        ({ title, id: generatorId, taskListId }) =>
+        ({
+          title,
+          notes: TaskGeneration.composeTaskId({ generatorId, date }),
+          taskListId,
+          due: date.toISOString(),
+        } as TaskData)
       );
   };
 

@@ -133,21 +133,6 @@ const generateNthDayDefaultTasks = () => {
   generateDefaultTasks(date);
 }
 
-const transferTasksGenerators = () => {
-  const generatorsId = TasksList.getListIdByListTitle(
-    "Générateurs"
-  ) as string;
-  const tasksGenerators = TaskGeneration.getTasksGenerators(generatorsId);
-  GeneratorsDriveSheets.save(tasksGenerators.map(({ id, startDate, title, ...rest }) => [
-    id,
-    startDate.toISOString(),
-    title,
-    JSON.stringify(rest),
-    "",
-    true,
-  ]));
-};
-
 const moveCompleted = () => {
   const defaultListId = "@default";
   const reviewListId = TasksList.getListIdByListTitle("Bilans") as string;
