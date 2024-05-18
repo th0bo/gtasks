@@ -1,7 +1,26 @@
 function myFunction() {
   // reviewTasksPlot();
   // createBirthdayReminders();
-  console.log(GeneratorsDriveSheets.load());
+  // console.log(GeneratorsDriveSheets.load());
+  testEmojis();
+}
+
+const testEmojis = () => {
+  const labels = [
+    "Do the shopping",
+    "Prepare food",
+    "Go to the gym",
+    "Wash auto",
+    "Vacuuming",
+    "Wash window",
+    "Sort paper",
+    "Answering e-mails",
+    "Wash dish",
+    "Washing clothes",
+  ];
+  for (const text of labels.map((label) => `${Emojis.findMostRelevantEmoji(label)} ${label}`)) {
+    console.log(text);
+  }
 }
 
 /**
@@ -60,11 +79,11 @@ const moveDailyTasks = () => {
 
 const removeNonPersistentCompletedTasks = () => {
   const listId = TasksList.getListIdByListTitle("Achevées") as string;
-  const completedTasks = TasksTasks.listAllTasks(listId, { 
+  const completedTasks = TasksTasks.listAllTasks(listId, {
     showCompleted: true,
     showHidden: true,
   });
-  
+
   const nonPersistentIds: string[] = GeneratorsDriveSheets.load().filter(
     ([, , , , , persistent]) => !persistent
   ).map(
