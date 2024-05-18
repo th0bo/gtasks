@@ -127,7 +127,6 @@ const generateTomorrowDefaultTasks = () => {
 
 const generateNthDayDefaultTasks = () => {
   const scriptProperties = PropertiesService.getScriptProperties();
-  /** YYYY/MM/DD format */
   const offset = scriptProperties.getProperty("nthDay") as string;
   const date = dayjs(new Date()).add(Number(offset), "day").toDate();
   generateDefaultTasks(date);
