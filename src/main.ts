@@ -7,16 +7,26 @@ function myFunction() {
 
 const testEmojis = () => {
   const labels = [
-    "Do the shopping",
-    "Prepare food",
-    "Go to the gym",
-    "Wash auto",
-    "Vacuuming",
-    "Wash window",
-    "Sort paper",
-    "Answering e-mails",
-    "Wash dish",
-    "Washing clothes",
+    "Faire les courses",
+    "Préparer le repas",
+    "Faire la vaisselle",
+    "Ranger la maison",
+    "Laver le linge",
+    "Repasser les vêtements",
+    "Nettoyer la salle de bain",
+    "Passer l'aspirateur",
+    "Faire du sport",
+    "Lire un livre",
+    "Regarder un film",
+    "Écouter de la musique",
+    "Apprendre une nouvelle compétence",
+    "Pratiquer un hobby",
+    "Passer du temps avec des amis",
+    "Se promener dans la nature",
+    "Visiter un musée",
+    "Faire du bénévolat",
+    "Prendre soin de soi",
+    "Dormir suffisamment"
   ];
   for (const text of labels.map((label) => `${Emojis.findMostRelevantEmoji(label)} ${label}`)) {
     console.log(text);
