@@ -5,12 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "clasp": "node preclasp.js && pnpm exec clasp"
+    "clasp": "bun preclasp.ts && pnpm exec clasp"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@google/clasp": "^2.4.2",
+    "@types/bun": "^1.1.10",
     "@types/google-apps-script": "^1.0.82",
     "drive-sheets": "github:th0bo/drive-sheets",
     "typescript": "^5.4.3"

@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+import * as fs from 'fs';
 
 const rootDir = __dirname;
 const scriptId = "1WSAwCTQ4paxDjometwtzcr29gOb7Li0iGUoS7lkjU7c_tVjCUM2QkdoX";
