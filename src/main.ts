@@ -94,13 +94,14 @@ const removeNonPersistentCompletedTasks = () => {
     showHidden: true,
   });
 
-  const nonPersistentIds: string[] = GeneratorsDriveSheets.load().filter(
+  const nonPersistentGeneratorsIds: string[] = GeneratorsDriveSheets.load().filter(
     ([, , , , , persistent]) => !persistent
   ).map(
     ([id]) => id
   );
-  for (const { id, title, notes } of completedTasks) {
-    if (id !== undefined && notes !== undefined && nonPersistentIds.includes(notes)) {
+  for (const { id, notes } of completedTasks) {
+    const generatorId = (notes !== undefined ? TaskGeneration.decomposeTaskId(notes) : undefined)?.generatorId;
+    if (id !== undefined && generatorId !== undefined && nonPersistentGeneratorsIds.includes(generatorId)) {
       TasksTasks.getTasks().remove(listId, id);
     }
   }
