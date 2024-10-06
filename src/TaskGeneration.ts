@@ -16,6 +16,7 @@ namespace TaskGeneration {
     title: string;
     taskListId: string;
     persistent: boolean;
+    enabled: boolean;
   } & Recurrence;
 
   type TaskData = {
