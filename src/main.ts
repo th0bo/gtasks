@@ -5,6 +5,38 @@ function myFunction() {
   testEmojis();
 }
 
+/**
+ * The goal is to rename tasks with the last label of their generator, in order to switch
+ * from a system where tasks have an ID stored in notes, made out of their generator's ID 
+ * and their due date, to a system where generators titles are readonly and tasks are 
+ * thus simply linked to their generator by their title.
+ */
+const renameTasks = () => {
+  const idToTitle = new Map(GeneratorsDriveSheets.load().map(([id, , title, , ]) => [id, title]));
+  const tasklist = TasksList.getListIdByListTitle("Achevées") as string;
+  const tasks = TasksTasks.listAllTasks(tasklist, { showCompleted: true, showHidden: true });
+  for (const task of tasks) {
+    const notes = task.notes;
+    if (notes !== undefined && notes !== '') {
+      const { generatorId } = TaskGeneration.decomposeTaskId(notes);
+      const taskNewTitle = idToTitle.get(generatorId);
+      if (taskNewTitle === undefined && !/_\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/.test(notes)) {
+        console.error(generatorId);
+      } else {
+        task.title = taskNewTitle ?? task.title;
+        task.notes = '';
+        try {
+          Tasks.Tasks?.patch(task, tasklist, task.id as string);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          console.info(task);
+        }
+      }
+    }
+  }
+}
+
 const testEmojis = () => {
   const labels = [
     "Faire les courses",

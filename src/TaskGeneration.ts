@@ -18,33 +18,9 @@ namespace TaskGeneration {
     persistent: boolean;
   } & Recurrence;
 
-  /**
-   *
-   * @deprecated
-   * @param generatorsListId
-   * @returns
-   */
-  export const getTasksGenerators = (generatorsListId: string) => {
-    return (
-      TasksTasks.getTasks().list(generatorsListId, {
-        showCompleted: false,
-        showHidden: true,
-      }).items ?? []
-    ).map((task) => {
-      const { title, notes, due, id } = task;
-      const recurrence = JSON.parse(notes ?? "{}") as Recurrence;
-      return {
-        id,
-        startDate: due !== undefined ? new Date(due) : new Date(),
-        title,
-        ...recurrence,
-      };
-    }) as TaskGenerator[];
-  };
-
   type TaskData = {
     title: string;
-    notes: string;
+    notes?: string;
     due: string;
     taskListId: string;
   };
@@ -69,7 +45,6 @@ namespace TaskGeneration {
         ({ title, id: generatorId, taskListId }) =>
         ({
           title,
-          notes: TaskGeneration.composeTaskId({ generatorId, date }),
           taskListId,
           due: date.toISOString(),
         } as TaskData)
@@ -77,9 +52,9 @@ namespace TaskGeneration {
   };
 
   export const createTasks = (tasksData: TaskData[]) => {
-    for (const { title, notes, taskListId, due } of tasksData) {
+    for (const { title, taskListId, due, ...options } of tasksData) {
       try {
-        const newTask = { ...Tasks.newTask(), title, notes, due };
+        const newTask = { ...Tasks.newTask(), ...options, title, due };
         TasksTasks.getTasks().insert(newTask, taskListId);
       } catch (e) {
         console.error(e);
