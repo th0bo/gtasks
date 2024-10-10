@@ -26,13 +26,16 @@ namespace TaskGeneration {
     taskListId: string;
   };
 
-  export const composeTaskId = ({ generatorId, date }: { generatorId: string, date: Date }) => [generatorId, date.toISOString()].join("_");
+  /**
+   * @param taskId Task ID made by concatenating the due date and the task generator ID and stored in the task notes
+   * @returns Generator ID and due date
+   * @deprecated Task - generator link is no longer handled through IDs stored in notes
+   */
   export const decomposeTaskId = (taskId: string) => {
     const [generatorId, isoDate] = taskId.split("_") as [string, string];
     const date = new Date(isoDate);
     return { generatorId, date };
   }
-  export const isTaskChild = (taskId: string, generatorId: string) => TaskGeneration.decomposeTaskId(taskId).generatorId === generatorId;
 
   export const generateTasks = (
     date: Date,

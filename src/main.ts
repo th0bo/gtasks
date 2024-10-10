@@ -126,14 +126,13 @@ const removeNonPersistentCompletedTasks = () => {
     showHidden: true,
   });
 
-  const nonPersistentGeneratorsIds: string[] = GeneratorsDriveSheets.load().filter(
+  const nonPersistentGeneratorsTitles: string[] = GeneratorsDriveSheets.load().filter(
     ([, , , , , persistent]) => !persistent
   ).map(
-    ([id]) => id
+    ([, , title]) => title
   );
-  for (const { id, notes } of completedTasks) {
-    const generatorId = (notes !== undefined ? TaskGeneration.decomposeTaskId(notes) : undefined)?.generatorId;
-    if (id !== undefined && generatorId !== undefined && nonPersistentGeneratorsIds.includes(generatorId)) {
+  for (const { id, title } of completedTasks) {
+    if (id !== undefined && title !== undefined && nonPersistentGeneratorsTitles.includes(title)) {
       TasksTasks.getTasks().remove(listId, id);
     }
   }
