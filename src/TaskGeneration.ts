@@ -14,6 +14,7 @@ namespace TaskGeneration {
     id: string;
     startDate: Date;
     title: string;
+    notes: string;
     taskListId: string;
     persistent: boolean;
     enabled: boolean;
@@ -46,9 +47,10 @@ namespace TaskGeneration {
         checkRecurrence(date, startDate, recurrence)
       )
       .map(
-        ({ title, id: generatorId, taskListId }) =>
+        ({ title, notes, taskListId }) =>
         ({
           title,
+          notes,
           taskListId,
           due: date.toISOString(),
         } as TaskData)

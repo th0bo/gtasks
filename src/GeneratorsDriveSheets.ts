@@ -3,11 +3,12 @@
 declare const DriveSheets: DriveSheetsLibrary;
 
 namespace GeneratorsDriveSheets {
-  type Line = [string, string, string, string, string, boolean, boolean];
+  export type Line = [string, string, string, string, string, string, boolean, boolean];
+  const generatorsFileSheetRange = "A2:H";
 
   const scriptProperties = PropertiesService.getScriptProperties();
   const fileName = scriptProperties.getProperty("generatorsFileName") as string;
-  const range = scriptProperties.getProperty("generatorsRange") as string;
+  const range = `${scriptProperties.getProperty("generatorsFileSheet") as string}!${generatorsFileSheetRange}`;
 
   export const load = () => {
     return DriveSheets.load({ fileName, range }) as Line[];

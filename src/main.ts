@@ -12,7 +12,7 @@ function myFunction() {
  * thus simply linked to their generator by their title.
  */
 const renameTasks = () => {
-  const idToTitle = new Map(GeneratorsDriveSheets.load().map(([id, , title]) => [id, title]));
+  const idToTitle = new Map(GeneratorsDriveSheets.load().map(convertLineToGenerator).map(({ id, title }) => [id, title]));
   const tasklist = TasksList.getListIdByListTitle("Achevées") as string;
   const tasks = TasksTasks.listAllTasks(tasklist, { showCompleted: true, showHidden: true });
   for (const task of tasks) {
@@ -126,10 +126,10 @@ const removeNonPersistentCompletedTasks = () => {
     showHidden: true,
   });
 
-  const nonPersistentGeneratorsTitles: string[] = GeneratorsDriveSheets.load().filter(
-    ([, , , , , persistent]) => !persistent
+  const nonPersistentGeneratorsTitles: string[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
+    ({ persistent }) => !persistent
   ).map(
-    ([, , title]) => title
+    ({ title }) => title
   );
   for (const { id, title } of completedTasks) {
     if (id !== undefined && title !== undefined && nonPersistentGeneratorsTitles.includes(title)) {
@@ -141,17 +141,7 @@ const removeNonPersistentCompletedTasks = () => {
 const generateDailyTasks = () => {
   const defaultId = "@default";
   const today = new Date();
-  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(
-    ([id, startIsoDate, title, recurrenceJson, taskListId, persistent, enabled]) => ({
-      id,
-      startDate: new Date(startIsoDate),
-      title,
-      taskListId,
-      ...JSON.parse(recurrenceJson),
-      persistent,
-      enabled,
-    } as TaskGeneration.TaskGenerator)
-  ).filter(
+  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
     ({ taskListId, enabled }) => taskListId !== defaultId && enabled
   );
   console.log(tasksGenerators);
@@ -160,19 +150,30 @@ const generateDailyTasks = () => {
   TaskGeneration.createTasks(tasksData);
 };
 
+const convertLineToGenerator: (line: GeneratorsDriveSheets.Line) => TaskGeneration.TaskGenerator = ([
+  id,
+  startIsoDate,
+  title,
+  notes,
+  recurrenceJson,
+  taskListId,
+  persistent,
+  enabled
+]) => ({ 
+  id,
+  startDate: new Date(startIsoDate),
+  title,
+  notes,
+  taskListId,
+  ...(JSON.parse(recurrenceJson) as TaskGeneration.Recurrence),
+  persistent,
+  enabled,
+ });
+
 const generateDefaultTasks = (date: Date) => {
   const toComeId = TasksList.getListIdByListTitle("À venir") as string;
   const defaultId = "@default";
-  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(
-    ([id, startIsoDate, title, recurrenceJson, taskListId, , enabled]) => ({
-      id,
-      startDate: new Date(startIsoDate),
-      title,
-      taskListId,
-      ...(JSON.parse(recurrenceJson) as TaskGeneration.Recurrence),
-      enabled,
-    } as TaskGeneration.TaskGenerator)
-  ).filter(
+  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
     ({ taskListId, enabled }) => taskListId === defaultId && enabled
   ).map(
     ({ taskListId, ...rest }) => ({ ...rest, taskListId: toComeId })
