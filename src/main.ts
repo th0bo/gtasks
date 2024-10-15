@@ -2,7 +2,9 @@ function myFunction() {
   // reviewTasksPlot();
   // createBirthdayReminders();
   // console.log(GeneratorsDriveSheets.load());
-  testEmojis();
+  // testEmojis();
+  const tasksData = computeDefaultTasks(new Date('2024-10-14'));
+  console.log(tasksData);
 }
 
 /**
@@ -170,7 +172,7 @@ const convertLineToGenerator: (line: GeneratorsDriveSheets.Line) => TaskGenerati
   enabled,
  });
 
-const generateDefaultTasks = (date: Date) => {
+const computeDefaultTasks = (date: Date) => {
   const toComeId = TasksList.getListIdByListTitle("À venir") as string;
   const defaultId = "@default";
   const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
@@ -179,7 +181,11 @@ const generateDefaultTasks = (date: Date) => {
     ({ taskListId, ...rest }) => ({ ...rest, taskListId: toComeId })
   );
   console.log(tasksGenerators);
-  const tasksData = TaskGeneration.generateTasks(date, tasksGenerators);
+  return TaskGeneration.generateTasks(date, tasksGenerators);
+}
+
+const generateDefaultTasks = (date: Date) => {
+  const tasksData = computeDefaultTasks(date);
   console.log(tasksData);
   TaskGeneration.createTasks(tasksData);
 }

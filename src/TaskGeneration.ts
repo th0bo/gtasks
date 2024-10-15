@@ -8,6 +8,12 @@ namespace TaskGeneration {
     monthWeeks: number[];
     yearInterval: number;
     yearDays: number[];
+    /**
+     * The task will be generated n days after the date matching the recurrence pattern.
+     * A negative daysOffset leads to task generation before the date matching the recurrence pattern.
+     * Default behavior is daysOffset 0.
+     */
+    daysOffset: number;
   }>;
 
   export type TaskGenerator = {
@@ -73,7 +79,9 @@ namespace TaskGeneration {
     startDate: Date,
     recurrence: Recurrence
   ) => {
-    const dayA = dayjs(today);
+    const daysOffset = recurrence.daysOffset ?? 0;
+
+    const dayA = dayjs(today).add(daysOffset * -1, "days");
     const dayB = dayjs(startDate);
 
     const dayInterval = recurrence.dayInterval ?? 1;
