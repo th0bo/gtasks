@@ -3,8 +3,16 @@ function myFunction() {
   // createBirthdayReminders();
   // console.log(GeneratorsDriveSheets.load());
   // testEmojis();
-  const tasksData = computeDefaultTasks(new Date('2024-10-14'));
-  console.log(tasksData);
+  // const tasksData = computeDefaultTasks(new Date('2024-10-14'));
+  // console.log(tasksData);
+  console.log(generateMissingFutureTasks());
+  // const lines = GeneratorsDriveSheets.load();
+  // console.log(lines);
+}
+
+const listExistingTasks = (tasklists: string[]) => {
+  const tasks = tasklists.map((tasklist) => TasksTasks.listAllTasks(tasklist, { showCompleted: true, showHidden: true })).flat();
+  return tasks;
 }
 
 /**
@@ -75,9 +83,9 @@ const runEarly = () => {
   const errors: any[] = [];
   for (const executeStep of [
     moveCompleted,
-    generateDailyTasks,
-    generateTomorrowDefaultTasks,
     moveDailyTasks,
+    generateMissingDailyTasks,
+    generateMissingFutureTasks,
   ]) {
     try {
       executeStep();
@@ -140,17 +148,59 @@ const removeNonPersistentCompletedTasks = () => {
   }
 }
 
-const generateDailyTasks = () => {
-  const defaultId = "@default";
+const generateMissingDailyTasks = () => {
   const today = new Date();
-  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
-    ({ taskListId, enabled }) => taskListId !== defaultId && enabled
+  const enabledTasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
+    ({ enabled }) => enabled
   );
-  console.log(tasksGenerators);
-  const tasksData = TaskGeneration.generateTasks(today, tasksGenerators);
-  console.log(tasksData);
+
+  const taskListsIds = [...new Set(enabledTasksGenerators.map(({ taskListId }) => taskListId))];
+  const taskListIdToExistingTasksTitles = new Map(taskListsIds.map((taskListId) => {
+    const existingTasks = TasksTasks.listAllTasks(taskListId, {
+      showCompleted: true,
+      showHidden: true,
+    });
+    return [taskListId, new Set(existingTasks.map(({ title }) => title))];
+  }));
+
+  const enabledNeededTasksGenerators = enabledTasksGenerators.filter(
+    ({ taskListId, title }) => !(taskListIdToExistingTasksTitles.get(
+      taskListId) as Set<string>
+    ).has(title)
+  );
+
+  const tasksData = TaskGeneration.computeTasks(today, enabledNeededTasksGenerators);
   TaskGeneration.createTasks(tasksData);
 };
+
+const generateMissingFutureTasks = () => {
+  const futureTasksToCreate = computeMissingFutureTasks();
+  TaskGeneration.createTasks(futureTasksToCreate);
+}
+
+const computeMissingFutureTasks = () => {
+  const today = new Date();
+  const toComeId = TasksList.getListIdByListTitle("À venir") as string;
+
+  const enabledTasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
+    ({ enabled }) => enabled
+  );
+
+  const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, 100, enabledTasksGenerators)
+    .map((computedTask) => ({ ...computedTask, taskListId: toComeId }));
+
+  const existingFutureTasks = TasksTasks.listAllTasks(toComeId, { showCompleted: true, showHidden: true });
+
+  const futureTasksToCreate = diffTasks(existingFutureTasks, computedFutureTasks);
+
+  return futureTasksToCreate;
+}
+
+const diffTasks = (existingTasks: GoogleAppsScript.Tasks.Schema.Task[], computedTasks: TaskGeneration.TaskData[]) => {
+  const makeId = (({ due, title }: { due: string, title: string }) => `${title}|${due.substring(0, 10)}`);
+  const existingTasksIds = new Set(existingTasks.map(makeId));
+  return computedTasks.filter((computedTask) => !existingTasksIds.has(makeId(computedTask)));
+}
 
 const convertLineToGenerator: (line: GeneratorsDriveSheets.Line) => TaskGeneration.TaskGenerator = ([
   id,
@@ -160,7 +210,8 @@ const convertLineToGenerator: (line: GeneratorsDriveSheets.Line) => TaskGenerati
   recurrenceJson,
   taskListId,
   persistent,
-  enabled
+  enabled,
+  aheadQuantity,
 ]) => ({ 
   id,
   startDate: new Date(startIsoDate),
@@ -170,6 +221,7 @@ const convertLineToGenerator: (line: GeneratorsDriveSheets.Line) => TaskGenerati
   ...(JSON.parse(recurrenceJson) as TaskGeneration.Recurrence),
   persistent,
   enabled,
+  aheadQuantity,
  });
 
 const computeDefaultTasks = (date: Date) => {
@@ -181,7 +233,7 @@ const computeDefaultTasks = (date: Date) => {
     ({ taskListId, ...rest }) => ({ ...rest, taskListId: toComeId })
   );
   console.log(tasksGenerators);
-  return TaskGeneration.generateTasks(date, tasksGenerators);
+  return TaskGeneration.computeTasks(date, tasksGenerators);
 }
 
 const generateDefaultTasks = (date: Date) => {

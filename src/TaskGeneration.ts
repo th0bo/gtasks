@@ -1,4 +1,6 @@
 namespace TaskGeneration {
+  const comingDaysCount = 60;
+
   export type Recurrence = Partial<{
     dayInterval: number;
     weekInterval: number;
@@ -24,9 +26,10 @@ namespace TaskGeneration {
     taskListId: string;
     persistent: boolean;
     enabled: boolean;
+    aheadQuantity: number;
   } & Recurrence;
 
-  type TaskData = {
+  export type TaskData = {
     title: string;
     notes?: string;
     due: string;
@@ -44,33 +47,62 @@ namespace TaskGeneration {
     return { generatorId, date };
   }
 
-  export const generateTasks = (
+  const computeTask = (
+    date: Date,
+    { startDate, title, notes, taskListId, ...recurrence }: TaskGenerator
+  ) => {
+    return checkRecurrence(date, startDate, recurrence) ? {
+      title,
+      notes,
+      taskListId,
+      due: date.toISOString(),
+    } as TaskData : null;
+  };
+
+  export const computeTasks = (
     date: Date,
     tasksGenerators: TaskGenerator[]
   ) => {
     return tasksGenerators
-      .filter(({ startDate, ...recurrence }) =>
-        checkRecurrence(date, startDate, recurrence)
-      )
-      .map(
-        ({ title, notes, taskListId }) =>
-        ({
-          title,
-          notes,
-          taskListId,
-          due: date.toISOString(),
-        } as TaskData)
-      );
+      .map((taskGenerator) => computeTask(date, taskGenerator))
+      .filter((task) => task !== null);
   };
 
-  export const createTasks = (tasksData: TaskData[]) => {
-    for (const { title, taskListId, due, ...options } of tasksData) {
-      try {
-        const newTask = { ...Tasks.newTask(), ...options, title, due };
-        TasksTasks.getTasks().insert(newTask, taskListId);
-      } catch (e) {
-        console.error(e);
+  export const computeTasksForDaysInRange: (firstExcludedDay: Date, daysRangeSize: number, taskGenerators: TaskGeneration.TaskGenerator[]) => TaskData[] = (firstExcludedDay, daysRangeSize, taskGenerators) => {
+    const computedDailyTasks: TaskData[] = [];
+    const remainingTaskGenerators = taskGenerators.map((taskGenerator) => ({ ...taskGenerator })).filter(({ aheadQuantity }) => aheadQuantity > 0);
+    if (daysRangeSize <= 0 || remainingTaskGenerators.length <= 0) {
+      return computedDailyTasks;
+    }
+    const firstIncludedDay = dayjs(firstExcludedDay).add(1, "day").toDate();
+    const clonedRemainingTaskGenerators = remainingTaskGenerators.map((taskGenerator) => ({ ...taskGenerator }))
+
+    for (const taskGenerator of clonedRemainingTaskGenerators) {
+      const task = computeTask(firstIncludedDay, taskGenerator);
+      if (task !== null) {
+        computedDailyTasks.push(task);
+        taskGenerator.aheadQuantity--;
       }
+    }
+
+    return [
+      ...computedDailyTasks,
+      ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, clonedRemainingTaskGenerators),
+    ];
+  };
+
+  const createTask = ({ title, taskListId, due, ...options }: TaskData) => {
+    try {
+      const newTask = { ...Tasks.newTask(), ...options, title, due };
+      TasksTasks.getTasks().insert(newTask, taskListId);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  export const createTasks = (tasksData: TaskData[]) => {
+    for (const taskData of tasksData) {
+      createTask(taskData);
     }
   };
 
