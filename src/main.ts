@@ -1,18 +1,22 @@
 function myFunction() {
-  // reviewTasksPlot();
-  // createBirthdayReminders();
-  // console.log(GeneratorsDriveSheets.load());
-  // testEmojis();
-  // const tasksData = computeDefaultTasks(new Date('2024-10-14'));
-  // console.log(tasksData);
-  console.log(generateMissingFutureTasks());
-  // const lines = GeneratorsDriveSheets.load();
-  // console.log(lines);
-}
+  const generatorsLines = GeneratorsDriveSheets.load();
+  // console.log(generatorsLines);
+  const generators = generatorsLines.map(convertLineToGenerator);
+  const completedListId = TasksList.getListIdByListTitle("Achevées") as string;
+  const toComeListId = TasksList.getListIdByListTitle("À venir") as string;
+  const defaultListId = "@default";
+  const taskTitleToTaskListId = new Map(generators.map(({ title, taskListId }) => [title, taskListId]));
+  const sourceListsIds = [...taskTitleToTaskListId.values()];
+  const enabledGenerators = generators.filter(({ enabled }) => enabled);
+  const nonPersistentGeneratorsTitles = generators.filter(({ persistent }) => !persistent).map(({ title }) => title);
+  const today = new Date();
+  const tasksData: TaskGeneration.TaskData[] = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, 100, today)();
+  console.log(tasksData);
+  const tasksToRemove: ReturnType<ListTasksToRemove> = setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [defaultListId, completedListId])();
+  console.log(tasksToRemove);
 
-const listExistingTasks = (tasklists: string[]) => {
-  const tasks = tasklists.map((tasklist) => TasksTasks.listAllTasks(tasklist, { showCompleted: true, showHidden: true })).flat();
-  return tasks;
+  // setUpGenerateTasks(setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, 100, today))();
+  // setUpRemoveTasks(setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [completedListId]))();
 }
 
 /**
@@ -81,12 +85,31 @@ const testEmojis = () => {
  */
 const runEarly = () => {
   const errors: any[] = [];
-  for (const executeStep of [
+  const generators = GeneratorsDriveSheets.load().map(convertLineToGenerator);
+  const completedListId = TasksList.getListIdByListTitle("Achevées") as string;
+  const toComeListId = TasksList.getListIdByListTitle("À venir") as string;
+  const defaultListId = "@default";
+  const taskTitleToTaskListId = new Map(generators.map(({ title, taskListId }) => [title, taskListId]));
+  const sourceListsIds = [...taskTitleToTaskListId.values()];
+  const enabledGenerators = generators.filter(({ enabled }) => enabled);
+  const today = new Date();
+  const nonPersistentGeneratorsTitles = generators.filter(({ persistent }) => !persistent).map(({ title }) => title);
+  const listNonPersistentCompletedTasks = setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [defaultListId, completedListId]);
+  const removeNonPersistentCompletedTasks = setUpRemoveTasks(listNonPersistentCompletedTasks);
+  const moveCompleted = setUpMoveCompleted(sourceListsIds, completedListId);
+  const moveDailyTasks = setUpMoveDailyTasks(taskTitleToTaskListId, toComeListId, defaultListId);
+  const computeMissingDailyTasks = setUpComputeMissingDailyTasks(enabledGenerators, today);
+  const generateMissingDailyTasks = setUpGenerateTasks(computeMissingDailyTasks);
+  const computeMissingFutureTasks = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, 100, today);
+  const generateMissingFutureTasks = setUpGenerateTasks(computeMissingFutureTasks);
+  const steps: Array<() => void> = [
+    removeNonPersistentCompletedTasks,
     moveCompleted,
     moveDailyTasks,
     generateMissingDailyTasks,
     generateMissingFutureTasks,
-  ]) {
+  ];
+  for (const executeStep of steps) {
     try {
       executeStep();
     } catch (e) {
@@ -99,185 +122,163 @@ const runEarly = () => {
   }
 };
 
-function reviewTasksPlot() {
-  const reviewListId = TasksList.getListIdByListTitle("Bilans") as string;
-  const reviewTasks =
-    TasksTasks.getTasks().list(reviewListId, {
+type ListTasksToRemove = () => Array<{ listId: string, taskId: string }>; 
+
+const setUpListNonPersistentCompletedTasks:
+  (nonPersistentGeneratorsTitles: string[], taskListsIds: string[]) => ListTasksToRemove =
+  (nonPersistentGeneratorsTitles, taskListsIds) => {
+    const listNonPersistentCompletedTasks = (
+      () => taskListsIds.map((listId) => {
+        const completedTasks = TasksTasks.listAllTasks(listId, {
+          showCompleted: true,
+          showHidden: true,
+        }).filter(({ completed }) => completed !== undefined);
+        return completedTasks
+          .map(
+            ({ id, title }) => id !== undefined && title !== undefined && nonPersistentGeneratorsTitles.includes(title) ? { listId, taskId: id } : null
+          )
+          .filter((v) => v !== null);
+      }).flat()
+    );
+    return listNonPersistentCompletedTasks;
+  };
+
+const setUpRemoveTasks:
+  (listTasksToRemove: ListTasksToRemove) => (() => void) =
+  (listTasksToRemove) => {
+    const removeTasks = () => {
+      for (const { listId, taskId } of listTasksToRemove()) {
+        TasksTasks.getTasks().remove(listId, taskId);
+      }
+    }
+    return removeTasks;
+  };
+
+const setUpMoveDailyTasks:
+  (taskTitleToTaskListId: Map<string, string>, toComeListId: string, defaultListId: string) => (() => void) =
+  (taskTitleToTaskListId, toComeListId, defaultListId) => {
+    const moveDailyTasks = () => {
+      const endOfToday = new Date();
+      endOfToday.setUTCDate(endOfToday.getUTCDate() + 1);
+      endOfToday.setUTCSeconds(endOfToday.getUTCSeconds() - 1);
+      const tasks = TasksTasks.listAllTasks(toComeListId, {
+        dueMax: endOfToday.toISOString(),
+        showCompleted: false,
+        showHidden: true,
+      });
+      for (const task of tasks) {
+        const targetListId = taskTitleToTaskListId.get(task.title as string) ?? defaultListId;
+        DailyTasks.move(task, toComeListId, targetListId);
+      }
+    };
+    return moveDailyTasks;
+  };
+
+const setUpComputeMissingDailyTasks:
+  (enabledTasksGenerators: TaskGeneration.TaskGenerator[], today: Date) => (() => TaskGeneration.TaskData[]) =
+  (enabledTasksGenerators, today) => {
+    const computeMissingDailyTasks = () => {    
+      const taskListsIds = [...new Set(enabledTasksGenerators.map(({ taskListId }) => taskListId))];
+      const taskListIdToExistingTasksTitles = new Map(taskListsIds.map((taskListId) => {
+        const existingTasks = TasksTasks.listAllTasks(taskListId, {
+          showCompleted: true,
+          showHidden: true,
+        });
+        return [taskListId, new Set(existingTasks.map(({ title }) => title))];
+      }));
+    
+      const enabledNeededTasksGenerators = enabledTasksGenerators.filter(
+        ({ taskListId, title }) => !(taskListIdToExistingTasksTitles.get(
+          taskListId) as Set<string>
+        ).has(title)
+      );
+    
+      const tasksData = TaskGeneration.computeTasks(today, enabledNeededTasksGenerators);
+      return tasksData;
+    };
+    return computeMissingDailyTasks;
+  };
+
+const setUpGenerateTasks:
+  (computeTasks: () => TaskGeneration.TaskData[]) => (() => void) =
+  (computeTasks) => {
+    return () => {
+      for (const taskData of computeTasks()) {
+        const { newTask, taskListId } = buildTask(taskData);
+        TasksTasks.getTasks().insert(newTask, taskListId);
+      }
+    };
+  };
+
+const setUpComputeMissingFutureTasks:
+  (enabledTasksGenerators: TaskGeneration.TaskGenerator[], toComeListId: string, daysLimit: number, today: Date) => (() => TaskGeneration.TaskData[]) =
+  (enabledTasksGenerators, toComeListId, daysLimit, today) => {
+    const computeMissingFutureTasks = () => {
+      const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, daysLimit, enabledTasksGenerators)
+        .map((computedTask) => ({ ...computedTask, taskListId: toComeListId }));
+    
+      const existingFutureTasks = TasksTasks.listAllTasks(toComeListId, { showCompleted: true, showHidden: true });
+    
+      const futureTasksToCreate = filterExistingTasksFromComputedTasks(existingFutureTasks, computedFutureTasks);
+    
+      return futureTasksToCreate;
+    };
+    return computeMissingFutureTasks;
+  };
+
+const setUpMoveCompleted:
+  (sourceListsIds: string[], completedListId: string) => (() => void) = 
+  (sourceListsIds, completedListId) => {
+  const moveCompleted = () => {
+    const options = {
       showCompleted: true,
       showHidden: true,
-    }).items ?? [];
-  console.log(reviewTasks.length);
-  for (const { title, id, completed, ...rest } of reviewTasks) {
-    console.log(`${title} - ${id} - ${completed} - ${JSON.stringify(rest)}`);
-    // TasksTasks.getTasks().patch({ notes: 'hello world' }, reviewListId, id as string);
-  }
-  for (const calendar of CalendarApp.getAllCalendars()) {
-    console.log(`${calendar.getName()} - ${calendar.getId()}`);
-  }
-}
-
-const createBirthdayReminders = () => {
-  const titleToDue = BirthdayReminders.extractDataFromCalendar();
-  BirthdayReminders.storeDataAsTasks(titleToDue);
+    };
+    for (const sourceListId of sourceListsIds) {
+      const completedTasks = TasksTasks.listAllTasks(sourceListId, options).filter(({ completed }) => completed);
+      for (const completedTask of completedTasks) {
+        DailyTasks.move(completedTask, sourceListId, completedListId);
+      }
+    }
+  };
+  return moveCompleted;
 };
 
-const moveDailyTasks = () => {
-  const toComeId = TasksList.getListIdByListTitle("À venir") as string;
-  const defaultId = "@default";
-  for (const task of DailyTasks.list(toComeId) ?? []) {
-    DailyTasks.move(task, toComeId, defaultId);
-  }
-};
-
-const removeNonPersistentCompletedTasks = () => {
-  const listId = TasksList.getListIdByListTitle("Achevées") as string;
-  const completedTasks = TasksTasks.listAllTasks(listId, {
-    showCompleted: true,
-    showHidden: true,
+const convertLineToGenerator:
+  (line: GeneratorsDriveSheets.Line) => TaskGeneration.TaskGenerator =
+  ([
+    id,
+    startIsoDate,
+    title,
+    notes,
+    recurrenceJson,
+    taskListId,
+    persistent,
+    enabled,
+    aheadQuantity,
+  ]) => ({ 
+    id,
+    startDate: new Date(startIsoDate),
+    title,
+    notes,
+    taskListId,
+    ...(JSON.parse(recurrenceJson) as TaskGeneration.Recurrence),
+    persistent,
+    enabled,
+    aheadQuantity,
   });
 
-  const nonPersistentGeneratorsTitles: string[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
-    ({ persistent }) => !persistent
-  ).map(
-    ({ title }) => title
-  );
-  for (const { id, title } of completedTasks) {
-    if (id !== undefined && title !== undefined && nonPersistentGeneratorsTitles.includes(title)) {
-      TasksTasks.getTasks().remove(listId, id);
-    }
-  }
-}
+const filterExistingTasksFromComputedTasks:
+  (existingTasks: GoogleAppsScript.Tasks.Schema.Task[], computedTasks: TaskGeneration.TaskData[]) => TaskGeneration.TaskData[] =
+  (existingTasks, computedTasks) => {
+    const makeId = (({ due, title }: { due: string, title: string }) => `${title}|${due.substring(0, 10)}`);
+    const existingTasksIds = new Set(existingTasks.map(makeId));
+    return computedTasks.filter((computedTask) => !existingTasksIds.has(makeId(computedTask)));
+  };
 
-const generateMissingDailyTasks = () => {
-  const today = new Date();
-  const enabledTasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
-    ({ enabled }) => enabled
-  );
-
-  const taskListsIds = [...new Set(enabledTasksGenerators.map(({ taskListId }) => taskListId))];
-  const taskListIdToExistingTasksTitles = new Map(taskListsIds.map((taskListId) => {
-    const existingTasks = TasksTasks.listAllTasks(taskListId, {
-      showCompleted: true,
-      showHidden: true,
-    });
-    return [taskListId, new Set(existingTasks.map(({ title }) => title))];
-  }));
-
-  const enabledNeededTasksGenerators = enabledTasksGenerators.filter(
-    ({ taskListId, title }) => !(taskListIdToExistingTasksTitles.get(
-      taskListId) as Set<string>
-    ).has(title)
-  );
-
-  const tasksData = TaskGeneration.computeTasks(today, enabledNeededTasksGenerators);
-  TaskGeneration.createTasks(tasksData);
-};
-
-const generateMissingFutureTasks = () => {
-  const futureTasksToCreate = computeMissingFutureTasks();
-  TaskGeneration.createTasks(futureTasksToCreate);
-}
-
-const computeMissingFutureTasks = () => {
-  const today = new Date();
-  const toComeId = TasksList.getListIdByListTitle("À venir") as string;
-
-  const enabledTasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
-    ({ enabled }) => enabled
-  );
-
-  const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, 100, enabledTasksGenerators)
-    .map((computedTask) => ({ ...computedTask, taskListId: toComeId }));
-
-  const existingFutureTasks = TasksTasks.listAllTasks(toComeId, { showCompleted: true, showHidden: true });
-
-  const futureTasksToCreate = diffTasks(existingFutureTasks, computedFutureTasks);
-
-  return futureTasksToCreate;
-}
-
-const diffTasks = (existingTasks: GoogleAppsScript.Tasks.Schema.Task[], computedTasks: TaskGeneration.TaskData[]) => {
-  const makeId = (({ due, title }: { due: string, title: string }) => `${title}|${due.substring(0, 10)}`);
-  const existingTasksIds = new Set(existingTasks.map(makeId));
-  return computedTasks.filter((computedTask) => !existingTasksIds.has(makeId(computedTask)));
-}
-
-const convertLineToGenerator: (line: GeneratorsDriveSheets.Line) => TaskGeneration.TaskGenerator = ([
-  id,
-  startIsoDate,
-  title,
-  notes,
-  recurrenceJson,
-  taskListId,
-  persistent,
-  enabled,
-  aheadQuantity,
-]) => ({ 
-  id,
-  startDate: new Date(startIsoDate),
-  title,
-  notes,
-  taskListId,
-  ...(JSON.parse(recurrenceJson) as TaskGeneration.Recurrence),
-  persistent,
-  enabled,
-  aheadQuantity,
- });
-
-const computeDefaultTasks = (date: Date) => {
-  const toComeId = TasksList.getListIdByListTitle("À venir") as string;
-  const defaultId = "@default";
-  const tasksGenerators: TaskGeneration.TaskGenerator[] = GeneratorsDriveSheets.load().map(convertLineToGenerator).filter(
-    ({ taskListId, enabled }) => taskListId === defaultId && enabled
-  ).map(
-    ({ taskListId, ...rest }) => ({ ...rest, taskListId: toComeId })
-  );
-  console.log(tasksGenerators);
-  return TaskGeneration.computeTasks(date, tasksGenerators);
-}
-
-const generateDefaultTasks = (date: Date) => {
-  const tasksData = computeDefaultTasks(date);
-  console.log(tasksData);
-  TaskGeneration.createTasks(tasksData);
-}
-
-const generateTomorrowDefaultTasks = () => {
-  const tomorrow = dayjs(new Date()).add(1, "day").toDate();
-  generateDefaultTasks(tomorrow);
-};
-
-const generateNthDayDefaultTasks = () => {
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const offset = scriptProperties.getProperty("nthDay") as string;
-  const date = dayjs(new Date()).add(Number(offset), "day").toDate();
-  generateDefaultTasks(date);
-}
-
-const moveCompleted = () => {
-  const defaultListId = "@default";
-  const reviewListId = TasksList.getListIdByListTitle("Bilans") as string;
-  const completedListId = TasksList.getListIdByListTitle(
-    "Achevées"
-  ) as string;
-  (
-    TasksTasks.getTasks().list(defaultListId, {
-      showCompleted: true,
-      showHidden: true,
-    }).items ?? []
-  )
-    .filter(({ completed }) => completed)
-    .map((task) => {
-      DailyTasks.move(task, defaultListId, completedListId);
-    });
-  (
-    TasksTasks.getTasks().list(reviewListId, {
-      showCompleted: true,
-      showHidden: true,
-    }).items ?? []
-  )
-    .filter(({ completed }) => completed)
-    .map((task) => {
-      DailyTasks.move(task, reviewListId, completedListId);
-    });
-};
+const buildTask:
+  (taskData: TaskGeneration.TaskData) => { newTask: GoogleAppsScript.Tasks.Schema.Task, taskListId: string } =
+  ({ taskListId, ...rest }) => {
+    const newTask = Object.assign(Tasks.newTask(), rest);
+    return { newTask, taskListId };
+  };

@@ -1,6 +1,4 @@
 namespace TaskGeneration {
-  const comingDaysCount = 60;
-
   export type Recurrence = Partial<{
     dayInterval: number;
     weekInterval: number;
@@ -89,21 +87,6 @@ namespace TaskGeneration {
       ...computedDailyTasks,
       ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, clonedRemainingTaskGenerators),
     ];
-  };
-
-  const createTask = ({ title, taskListId, due, ...options }: TaskData) => {
-    try {
-      const newTask = { ...Tasks.newTask(), ...options, title, due };
-      TasksTasks.getTasks().insert(newTask, taskListId);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  export const createTasks = (tasksData: TaskData[]) => {
-    for (const taskData of tasksData) {
-      createTask(taskData);
-    }
   };
 
   const checkRecurrence = (
