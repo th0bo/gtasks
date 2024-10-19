@@ -5,17 +5,18 @@ function myFunction() {
   const completedListId = TasksList.getListIdByListTitle("Achevées") as string;
   const toComeListId = TasksList.getListIdByListTitle("À venir") as string;
   const defaultListId = "@default";
+  const daysSpan = 100;
   const taskTitleToTaskListId = new Map(generators.map(({ title, taskListId }) => [title, taskListId]));
   const sourceListsIds = [...taskTitleToTaskListId.values()];
   const enabledGenerators = generators.filter(({ enabled }) => enabled);
   const nonPersistentGeneratorsTitles = generators.filter(({ persistent }) => !persistent).map(({ title }) => title);
   const today = new Date();
-  const tasksData: TaskGeneration.TaskData[] = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, 100, today)();
+  const tasksData: TaskGeneration.TaskData[] = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, daysSpan, today)();
   console.log(tasksData);
   const tasksToRemove: ReturnType<ListTasksToRemove> = setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [defaultListId, completedListId])();
   console.log(tasksToRemove);
 
-  // setUpGenerateTasks(setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, 100, today))();
+  setUpGenerateTasks(setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, daysSpan, today))();
   // setUpRemoveTasks(setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [completedListId]))();
 }
 
@@ -93,6 +94,7 @@ const runEarly = () => {
   const sourceListsIds = [...taskTitleToTaskListId.values()];
   const enabledGenerators = generators.filter(({ enabled }) => enabled);
   const today = new Date();
+  const daysSpan = 100;
   const nonPersistentGeneratorsTitles = generators.filter(({ persistent }) => !persistent).map(({ title }) => title);
   const listNonPersistentCompletedTasks = setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [defaultListId, completedListId]);
   const removeNonPersistentCompletedTasks = setUpRemoveTasks(listNonPersistentCompletedTasks);
@@ -100,7 +102,7 @@ const runEarly = () => {
   const moveDailyTasks = setUpMoveDailyTasks(taskTitleToTaskListId, toComeListId, defaultListId);
   const computeMissingDailyTasks = setUpComputeMissingDailyTasks(enabledGenerators, today);
   const generateMissingDailyTasks = setUpGenerateTasks(computeMissingDailyTasks);
-  const computeMissingFutureTasks = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, 100, today);
+  const computeMissingFutureTasks = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, daysSpan, today);
   const generateMissingFutureTasks = setUpGenerateTasks(computeMissingFutureTasks);
   const steps: Array<() => void> = [
     removeNonPersistentCompletedTasks,
@@ -211,13 +213,24 @@ const setUpGenerateTasks:
   };
 
 const setUpComputeMissingFutureTasks:
-  (enabledTasksGenerators: TaskGeneration.TaskGenerator[], toComeListId: string, daysLimit: number, today: Date) => (() => TaskGeneration.TaskData[]) =
-  (enabledTasksGenerators, toComeListId, daysLimit, today) => {
+  (enabledTasksGenerators: TaskGeneration.TaskGenerator[], toComeListId: string, daysSpan: number, today: Date) => (() => TaskGeneration.TaskData[]) =
+  (enabledTasksGenerators, toComeListId, daysSpan, today) => {
     const computeMissingFutureTasks = () => {
-      const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, daysLimit, enabledTasksGenerators)
+      const existingFutureTasks = TasksTasks.listAllTasks(toComeListId, { showCompleted: true, showHidden: true }).filter(({ title }) => title !== undefined) as
+        Array<GoogleAppsScript.Tasks.Schema.Task & Pick<Required<GoogleAppsScript.Tasks.Schema.Task>, 'title'>>;
+
+      const taskTitleToCount: Map<string, number> = new Map();
+      for (const { title } of existingFutureTasks) {
+        const count = (taskTitleToCount.get(title) ?? 0) + 1;
+        taskTitleToCount.set(title, count);
+      }
+
+      enabledTasksGenerators = enabledTasksGenerators.map(
+        ({ title, aheadQuantity, ...rest }) => ({ title, aheadQuantity: aheadQuantity - (taskTitleToCount.get(title) ?? 0), ...rest })
+      );
+
+      const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, daysSpan, enabledTasksGenerators)
         .map((computedTask) => ({ ...computedTask, taskListId: toComeListId }));
-    
-      const existingFutureTasks = TasksTasks.listAllTasks(toComeListId, { showCompleted: true, showHidden: true });
     
       const futureTasksToCreate = filterExistingTasksFromComputedTasks(existingFutureTasks, computedFutureTasks);
     

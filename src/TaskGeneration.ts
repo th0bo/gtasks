@@ -68,18 +68,21 @@ namespace TaskGeneration {
 
   export const computeTasksForDaysInRange: (firstExcludedDay: Date, daysRangeSize: number, taskGenerators: TaskGeneration.TaskGenerator[]) => TaskData[] = (firstExcludedDay, daysRangeSize, taskGenerators) => {
     const computedDailyTasks: TaskData[] = [];
-    const remainingTaskGenerators = taskGenerators.map((taskGenerator) => ({ ...taskGenerator })).filter(({ aheadQuantity }) => aheadQuantity > 0);
+    const remainingTaskGenerators = taskGenerators.filter(({ aheadQuantity }) => aheadQuantity > 0);
     if (daysRangeSize <= 0 || remainingTaskGenerators.length <= 0) {
       return computedDailyTasks;
     }
     const firstIncludedDay = dayjs(firstExcludedDay).add(1, "day").toDate();
     const clonedRemainingTaskGenerators = remainingTaskGenerators.map((taskGenerator) => ({ ...taskGenerator }))
+    const titleToHomonymTaskGenerators = Map.groupBy(clonedRemainingTaskGenerators, ({ title }) => title);
 
     for (const taskGenerator of clonedRemainingTaskGenerators) {
       const task = computeTask(firstIncludedDay, taskGenerator);
       if (task !== null) {
         computedDailyTasks.push(task);
-        taskGenerator.aheadQuantity--;
+        for (const homonymTaskGenerator of titleToHomonymTaskGenerators.get(taskGenerator.title) ?? []) {
+          homonymTaskGenerator.aheadQuantity--;
+        }
       }
     }
 
