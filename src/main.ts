@@ -10,7 +10,7 @@ function myFunction() {
   const sourceListsIds = [...taskTitleToTaskListId.values()];
   const enabledGenerators = generators.filter(({ enabled }) => enabled);
   const nonPersistentGeneratorsTitles = generators.filter(({ persistent }) => !persistent).map(({ title }) => title);
-  const today = new Date();
+  const today = formatCalendarDay(new Date());
   const tasksData: TaskGeneration.TaskData[] = setUpComputeMissingFutureTasks(enabledGenerators, toComeListId, daysSpan, today)();
   console.log(tasksData);
   const tasksToRemove: ReturnType<ListTasksToRemove> = setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [defaultListId, completedListId])();
@@ -93,7 +93,7 @@ const runEarly = () => {
   const taskTitleToTaskListId = new Map(generators.map(({ title, taskListId }) => [title, taskListId]));
   const sourceListsIds = [...taskTitleToTaskListId.values()];
   const enabledGenerators = generators.filter(({ enabled }) => enabled);
-  const today = new Date();
+  const today = formatCalendarDay(new Date());
   const daysSpan = 100;
   const nonPersistentGeneratorsTitles = generators.filter(({ persistent }) => !persistent).map(({ title }) => title);
   const listNonPersistentCompletedTasks = setUpListNonPersistentCompletedTasks(nonPersistentGeneratorsTitles, [defaultListId, completedListId]);
@@ -123,6 +123,33 @@ const runEarly = () => {
     throw errors;
   }
 };
+
+/**
+ * Create a calendar date as a Date of format YYYY-MM-DDT00:00:00.000Z.
+ * Indeed, due dates are represented this way in Tasks API, without timezone nor time of day data.
+ * 
+ * Time of day can be set and accessed through UI, but not through API.
+ * 
+ * A task can be moved from a list to another through UI, but not through API.
+ * Instead, the task must be deleted from source list and copied in the target list.
+ * In the process, time of day data is thus erased.
+ * 
+ * @param date 
+ * @returns 
+ */
+const formatCalendarDay:
+  (date: Date) => Date =
+  (date) => {
+  const calendarDay = new Date(date);
+  calendarDay.setUTCFullYear(calendarDay.getFullYear());
+  calendarDay.setUTCMonth(calendarDay.getMonth());
+  calendarDay.setUTCDate(calendarDay.getDate());
+  calendarDay.setUTCHours(0);
+  calendarDay.setUTCMinutes(0);
+  calendarDay.setUTCSeconds(0);
+  calendarDay.setUTCMilliseconds(0);
+  return calendarDay;
+}
 
 type ListTasksToRemove = () => Array<{ listId: string, taskId: string }>; 
 
