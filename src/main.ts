@@ -155,13 +155,22 @@ const setUpComputeMissingTasks:
         taskTitleToCount.set(title, count);
       }
 
-      enabledTasksGenerators = enabledTasksGenerators.map(
+      let {
+        enabledDailyTasksGenerators,
+        enabledFutureTasksGenerators,
+      } = {
+        enabledDailyTasksGenerators: [],
+        enabledFutureTasksGenerators: [],
+        ...(Object.groupBy(enabledTasksGenerators, ({ aheadQuantity }) => aheadQuantity === 0 ? 'enabledDailyTasksGenerators' : 'enabledFutureTasksGenerators')),
+      };
+
+      enabledFutureTasksGenerators = enabledFutureTasksGenerators.map(
         ({ title, aheadQuantity, ...rest }) => ({ title, aheadQuantity: aheadQuantity - (taskTitleToCount.get(title) ?? 0), ...rest })
       );
 
-      const computedDailyTasks = TaskGeneration.computeTasks(today, enabledTasksGenerators, taskListId);
+      const computedDailyTasks = TaskGeneration.computeTasks(today, enabledDailyTasksGenerators, taskListId);
       const dailyTasksToCreate = filterExistingTasksFromComputedTasks(existingTasks, computedDailyTasks);
-      const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, daysSpan, enabledTasksGenerators, taskListId);
+      const computedFutureTasks: TaskGeneration.TaskData[] = TaskGeneration.computeTasksForDaysInRange(today, daysSpan, enabledFutureTasksGenerators, taskListId);
       const futureTasksToCreate = filterExistingTasksFromComputedTasks(existingTasks, computedFutureTasks);
     
       return [...dailyTasksToCreate, ...futureTasksToCreate];
