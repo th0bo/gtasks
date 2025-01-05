@@ -19,11 +19,12 @@ namespace TaskGeneration {
   export type TaskGenerator = {
     startDate: Date;
     title: string;
-    notes: string;
     persistent: boolean;
     enabled: boolean;
     aheadQuantity: number;
-  } & Recurrence;
+    behindQuantity: number;
+    recurrences: Array<{ notes: string } & Recurrence>;
+  };
 
   export type TaskData = {
     title: string;
@@ -45,15 +46,20 @@ namespace TaskGeneration {
 
   const computeTask = (
     date: Date,
-    { startDate, title, notes, ...recurrence }: TaskGenerator,
+    { startDate, title, recurrences }: TaskGenerator,
     taskListId: string,
   ) => {
-    return checkRecurrence(date, startDate, recurrence) ? {
-      title,
-      notes,
-      due: date.toISOString(),
-      taskListId,
-    } as TaskData : null;
+    for (const { notes, ...recurrence } of recurrences) {
+      if (checkRecurrence(date, startDate, recurrence)) {
+        return {
+          title, 
+          notes,
+          due: date.toISOString(),
+          taskListId,
+        };
+      }
+    }
+    return null;
   };
 
   export const computeTasks = (
@@ -67,30 +73,19 @@ namespace TaskGeneration {
   };
 
   export const computeTasksForDaysInRange:
-    (firstExcludedDay: Date, daysRangeSize: number, taskGenerators: TaskGeneration.TaskGenerator[], taskListId: string) => TaskData[] =
-    (firstExcludedDay, daysRangeSize, taskGenerators, taskListId) => {
+    (firstExcludedDay: Date, daysRangeSize: number, tasksCount: number, taskGenerator: TaskGeneration.TaskGenerator, taskListId: string) => TaskData[] =
+    (firstExcludedDay, daysRangeSize, tasksCount, taskGenerator, taskListId) => {
     const computedDailyTasks: TaskData[] = [];
-    const remainingTaskGenerators = taskGenerators.filter(({ aheadQuantity }) => aheadQuantity > 0);
-    if (daysRangeSize <= 0 || remainingTaskGenerators.length <= 0) {
+    if (daysRangeSize <= 0 || tasksCount <= 0) {
       return computedDailyTasks;
     }
     const firstIncludedDay = dayjs(firstExcludedDay).add(1, "day").toDate();
-    const clonedRemainingTaskGenerators = remainingTaskGenerators.map((taskGenerator) => ({ ...taskGenerator }))
-    const titleToHomonymTaskGenerators = Map.groupBy(clonedRemainingTaskGenerators, ({ title }) => title);
-
-    for (const taskGenerator of clonedRemainingTaskGenerators) {
-      const task = computeTask(firstIncludedDay, taskGenerator, taskListId);
-      if (task !== null) {
-        computedDailyTasks.push(task);
-        for (const homonymTaskGenerator of titleToHomonymTaskGenerators.get(taskGenerator.title) ?? []) {
-          homonymTaskGenerator.aheadQuantity--;
-        }
-      }
-    }
+    const computedTask = computeTask(firstIncludedDay, taskGenerator, taskListId);
+    const computedTasks =  computedTask ? [computedTask] : [];
 
     return [
-      ...computedDailyTasks,
-      ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, clonedRemainingTaskGenerators, taskListId),
+      ...computedTasks,
+      ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, tasksCount - computedTasks.length, taskGenerator, taskListId),
     ];
   };
 

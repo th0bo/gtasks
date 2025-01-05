@@ -1,5 +1,5 @@
 namespace TasksList {
-  const getTasklists = () => {
+  const getTasklistsApi = () => {
     if (Tasks.Tasklists === undefined) {
       throw new Error(`Tasklists API is not available.`);
     }
@@ -9,7 +9,7 @@ namespace TasksList {
   const listTitleToListId = new Map<string, string>();
 
   const initListTitleToListId = () => {
-    const taskLists = getTasklists().list().items ?? [];
+    const taskLists = getTasklistsApi().list().items ?? [];
     for (const { title, id } of taskLists) {
       if (title !== undefined && id !== undefined) {
         listTitleToListId.set(title, id);

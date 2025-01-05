@@ -3,8 +3,8 @@
 declare const DriveSheets: DriveSheetsLibrary;
 
 namespace GeneratorsDriveSheets {
-  export type Line = [string, string, string, string, boolean, boolean, number];
-  const generatorsFileSheetRange = "A2:G";
+  export type Line = [string, string, string, string, boolean, boolean, number, number];
+  const generatorsFileSheetRange = "A2:H";
 
   const scriptProperties = PropertiesService.getScriptProperties();
   const fileName = scriptProperties.getProperty("generatorsFileName") as string;
