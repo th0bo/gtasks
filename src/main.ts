@@ -1,5 +1,5 @@
 function myFunction() {
-  console.log(setUpRun(DayGs.dayjs(new Date()).add(1, "days").toDate()));
+  console.log(setUpRun(DayGs.dayjs(new Date()).add(3, "days").toDate()));
 }
 
 const testEmojis = () => {
@@ -30,14 +30,20 @@ const testEmojis = () => {
   }
 }
 
+type TaskIds = {
+  id: string;
+  listId: string;
+}
+
 type RunSetUp = {
-  tasksIdsToRemove: string[];
+  tasksIdsToRemove: TaskIds[];
   tasksToCreateData: TaskGeneration.TaskData[];
 };
 
 const setUpRun:
   (date: Date) => RunSetUp =
   (date) => {
+    const today = formatCalendarDay(date);
     const generators = [
       ...Object.values(
         Object.groupBy(
@@ -51,7 +57,11 @@ const setUpRun:
         )
       )
     ].map(convertLinesToGenerator);
-    const existingTasks = listExistingTasks();
+    const taskListId = "@default";
+    const existingTasks = TasksTasks.listAllTasks(taskListId, {
+      showCompleted: true,
+      showHidden: true,
+    });
     const sortedExistingTasks = sortExistingTasks(existingTasks);
     return generators.map((generator) => {
       const {
@@ -60,13 +70,21 @@ const setUpRun:
         behindQuantity,
       } = generator;
       const relatedTasks = (sortedExistingTasks.get(title) ?? []).filter(({ due }) => due !== undefined);
-      const relatedUncompletedTasks = relatedTasks.filter(({ completed }) => completed === undefined);
-      const relatedCompletedTasks = relatedTasks.filter(({ completed }) => completed !== undefined);
-      const tasksIdsToRemove = relatedCompletedTasks.slice(0, -1 * behindQuantity).map(({ id }) => id) as string[];
-      const today = formatCalendarDay(date);
+      const relatedFutureUncompletedTasks = relatedTasks.filter(
+        ({ completed, due }) =>
+          completed === undefined
+          && (due !== undefined ? (new Date(due)).getTime() : Infinity) >= today.getTime()
+      );
+      const relatedPastCompletedTasks = relatedTasks.filter(
+        ({ completed, due }) =>
+          completed !== undefined
+          && (due !== undefined ? (new Date(due)).getTime() : Infinity) <= today.getTime()
+      );
+      const tasksToRemove = behindQuantity > 0 ? relatedPastCompletedTasks.slice(0, -1 * behindQuantity) : relatedPastCompletedTasks;
+      const tasksIdsToRemove = tasksToRemove.map(({ id }) => ({ id, listId: taskListId })) as TaskIds[];
       const yesterday = DayGs.dayjs(today).add(-1, "days").toDate();
-      const firstExcludedDay = new Date(relatedUncompletedTasks.at(-1)?.due ?? yesterday);
-      const tasksToCreateCount = Math.max(aheadQuantity - relatedUncompletedTasks.length, 0);
+      const firstExcludedDay = new Date(relatedFutureUncompletedTasks.at(-1)?.due ?? yesterday);
+      const tasksToCreateCount = Math.max(aheadQuantity - relatedFutureUncompletedTasks.length, 0);
       const daysSpan = 2000;
       const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(firstExcludedDay, daysSpan, tasksToCreateCount, generator, "@default");
       return { tasksIdsToRemove, tasksToCreateData };
@@ -101,10 +119,9 @@ const runEarly = () => {
   const errors: any[] = [];
   const runSetUp = setUpRun(new Date());
 
-  const taskListId = "@default";
   const removeTasks = () => {
-    for (const taskId of runSetUp.tasksIdsToRemove) {
-      TasksTasks.getTasks().remove(taskListId, taskId);
+    for (const { id: taskId, listId } of runSetUp.tasksIdsToRemove) {
+      TasksTasks.getTasks().remove(listId, taskId);
     }
   }
   const createTasks = () => {
@@ -114,7 +131,7 @@ const runEarly = () => {
     }
   }
   const steps: Array<() => void> = [
-    // removeTasks,
+    removeTasks,
     createTasks,
   ];
   for (const executeStep of steps) {
@@ -129,16 +146,6 @@ const runEarly = () => {
     throw errors;
   }
 };
-
-const listExistingTasks:
- () => GoogleAppsScript.Tasks.Schema.Task[] =
- () => {
-  const taskListId = "@default";
-  return TasksTasks.listAllTasks(taskListId, {
-    showCompleted: true,
-    showHidden: true,
-  });
- };
 
 const sortExistingTasks:
   (existingTasks: GoogleAppsScript.Tasks.Schema.Task[]) => Map<string | undefined, GoogleAppsScript.Tasks.Schema.Task[]> =
@@ -177,8 +184,6 @@ const formatCalendarDay:
   return calendarDay;
 }
 
-type ListTasksToRemove = () => Array<{ taskListId: string, taskId: string }>; 
-
 const convertLinesToGenerator:
   (lines: GeneratorsDriveSheets.Line[]) => TaskGeneration.TaskGenerator =
   (lines) => {
@@ -210,14 +215,6 @@ const convertLinesToGenerator:
       aheadQuantity,
       behindQuantity,
     };
-  };
-
-const filterExistingTasksFromComputedTasks:
-  (existingTasks: GoogleAppsScript.Tasks.Schema.Task[], computedTasks: TaskGeneration.TaskData[]) => TaskGeneration.TaskData[] =
-  (existingTasks, computedTasks) => {
-    const makeId = (({ due, title }: { due: string, title: string }) => `${title}|${due.substring(0, 10)}`);
-    const existingTasksIds = new Set(existingTasks.filter(({ due, title }) => due !== undefined && title !== undefined).map(makeId));
-    return computedTasks.filter((computedTask) => !existingTasksIds.has(makeId(computedTask)));
   };
 
 const buildTask:
