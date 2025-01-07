@@ -195,8 +195,6 @@ const convertLinesToGenerator:
       title,
       ,
       ,
-      persistent,
-      enabled,
       aheadQuantity,
       behindQuantity,
     ] = lines[0];
@@ -213,8 +211,6 @@ const convertLinesToGenerator:
       startDate: new Date(startIsoDate),
       title,
       recurrences,
-      persistent,
-      enabled,
       aheadQuantity,
       behindQuantity,
     };

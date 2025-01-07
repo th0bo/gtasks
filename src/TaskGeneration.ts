@@ -19,8 +19,6 @@ namespace TaskGeneration {
   export type TaskGenerator = {
     startDate: Date;
     title: string;
-    persistent: boolean;
-    enabled: boolean;
     aheadQuantity: number;
     behindQuantity: number;
     recurrences: Array<{ notes: string } & Recurrence>;
