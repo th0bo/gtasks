@@ -1,5 +1,5 @@
 function myFunction() {
-  console.log(setUpRun(DayGs.dayjs(new Date()).add(3, "days").toDate()));
+  console.log(setUpRun(DayGs.dayjs(new Date()).add(1, "days").toDate()));
 }
 
 const testEmojis = () => {
@@ -70,10 +70,13 @@ const setUpRun:
         behindQuantity,
       } = generator;
       const relatedTasks = (sortedExistingTasks.get(title) ?? []).filter(({ due }) => due !== undefined);
-      const relatedFutureUncompletedTasks = relatedTasks.filter(
-        ({ completed, due }) =>
+      const relatedFutureTasks = relatedTasks.filter(
+        ({ due }) =>
+          (due !== undefined ? (new Date(due)).getTime() : Infinity) >= today.getTime()
+      );
+      const relatedFutureUncompletedTasks = relatedFutureTasks.filter(
+        ({ completed }) =>
           completed === undefined
-          && (due !== undefined ? (new Date(due)).getTime() : Infinity) >= today.getTime()
       );
       const relatedPastCompletedTasks = relatedTasks.filter(
         ({ completed, due }) =>
@@ -83,7 +86,7 @@ const setUpRun:
       const tasksToRemove = behindQuantity > 0 ? relatedPastCompletedTasks.slice(0, -1 * behindQuantity) : relatedPastCompletedTasks;
       const tasksIdsToRemove = tasksToRemove.map(({ id }) => ({ id, listId: taskListId })) as TaskIds[];
       const yesterday = DayGs.dayjs(today).add(-1, "days").toDate();
-      const firstExcludedDay = new Date(relatedFutureUncompletedTasks.at(-1)?.due ?? yesterday);
+      const firstExcludedDay = new Date(relatedFutureTasks.at(-1)?.due ?? yesterday);
       const tasksToCreateCount = Math.max(aheadQuantity - relatedFutureUncompletedTasks.length, 0);
       const daysSpan = 2000;
       const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(firstExcludedDay, daysSpan, tasksToCreateCount, generator, "@default");
