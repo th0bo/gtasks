@@ -19,8 +19,8 @@ namespace TaskGeneration {
   export type TaskGenerator = {
     startDate: Date;
     title: string;
-    aheadQuantity: number;
-    behindQuantity: number;
+    scheduledQuantity: number;
+    retainedQuantity: number;
     recurrences: Array<{ notes: string } & Recurrence>;
   };
 

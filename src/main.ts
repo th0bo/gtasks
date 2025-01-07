@@ -66,8 +66,8 @@ const setUpRun:
     return generators.map((generator) => {
       const {
         title,
-        aheadQuantity,
-        behindQuantity,
+        scheduledQuantity,
+        retainedQuantity,
       } = generator;
       const relatedTasks = (sortedExistingTasks.get(title) ?? []).filter(({ due }) => due !== undefined);
       const relatedFutureTasks = relatedTasks.filter(
@@ -83,11 +83,11 @@ const setUpRun:
           completed !== undefined
           && (due !== undefined ? (new Date(due)).getTime() : Infinity) <= today.getTime()
       );
-      const tasksToRemove = behindQuantity > 0 ? relatedPastCompletedTasks.slice(0, -1 * behindQuantity) : relatedPastCompletedTasks;
+      const tasksToRemove = retainedQuantity > 0 ? relatedPastCompletedTasks.slice(0, -1 * retainedQuantity) : relatedPastCompletedTasks;
       const tasksIdsToRemove = tasksToRemove.map(({ id }) => ({ id, listId: taskListId })) as TaskIds[];
       const yesterday = DayGs.dayjs(today).add(-1, "days").toDate();
       const firstExcludedDay = new Date(relatedFutureTasks.at(-1)?.due ?? yesterday);
-      const tasksToCreateCount = Math.max(aheadQuantity - relatedFutureUncompletedTasks.length, 0);
+      const tasksToCreateCount = Math.max(scheduledQuantity - relatedFutureUncompletedTasks.length, 0);
       const daysSpan = 2000;
       const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(firstExcludedDay, daysSpan, tasksToCreateCount, generator, "@default");
       return { tasksIdsToRemove, tasksToCreateData };
@@ -195,8 +195,8 @@ const convertLinesToGenerator:
       title,
       ,
       ,
-      aheadQuantity,
-      behindQuantity,
+      scheduledQuantity,
+      retainedQuantity,
     ] = lines[0];
     const recurrences = lines.map(([
       ,
@@ -211,8 +211,8 @@ const convertLinesToGenerator:
       startDate: new Date(startIsoDate),
       title,
       recurrences,
-      aheadQuantity,
-      behindQuantity,
+      scheduledQuantity,
+      retainedQuantity,
     };
   };
 
