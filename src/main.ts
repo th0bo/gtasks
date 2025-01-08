@@ -43,17 +43,12 @@ type RunSetUp = {
 const setUpRun:
   (date: Date) => RunSetUp =
   (date) => {
-    const today = formatCalendarDay(date);
+    const calendarDay = buildCalendarDay(date);
     const generators = [
       ...Object.values(
         Object.groupBy(
           GeneratorsDriveSheets.load(),
-          (
-            [
-              ,
-              title,
-            ]
-          ) => title
+          ([, title]) => title
         )
       )
     ].map(convertLinesToGenerator);
@@ -62,34 +57,28 @@ const setUpRun:
       showCompleted: true,
       showHidden: true,
     });
-    const sortedExistingTasks = sortExistingTasks(existingTasks);
+    const titleToSortedExistingTasks = sortExistingTasks(existingTasks);
     return generators.map((generator) => {
       const {
         title,
         scheduledQuantity,
         retainedQuantity,
       } = generator;
-      const relatedTasks = (sortedExistingTasks.get(title) ?? []).filter(({ due }) => due !== undefined);
-      const relatedFutureTasks = relatedTasks.filter(
-        ({ due }) =>
-          (due !== undefined ? (new Date(due)).getTime() : Infinity) >= today.getTime()
-      );
-      const relatedFutureUncompletedTasks = relatedFutureTasks.filter(
-        ({ completed }) =>
-          completed === undefined
-      );
-      const relatedPastCompletedTasks = relatedTasks.filter(
-        ({ completed, due }) =>
-          completed !== undefined
-          && (due !== undefined ? (new Date(due)).getTime() : Infinity) <= today.getTime()
-      );
+      const relatedTasks = (titleToSortedExistingTasks.get(title) ?? []).filter(({ due }) => due !== undefined);
+
+      const {
+        lastRelatedFutureTaskDue,
+        relatedFutureTasksCount,
+        relatedPastCompletedTasks,
+      } = analyzeRelatedTasks(relatedTasks, calendarDay);
+      
       const tasksToRemove = retainedQuantity > 0 ? relatedPastCompletedTasks.slice(0, -1 * retainedQuantity) : relatedPastCompletedTasks;
       const tasksIdsToRemove = tasksToRemove.map(({ id }) => ({ id, listId: taskListId })) as TaskIds[];
-      const yesterday = DayGs.dayjs(today).add(-1, "days").toDate();
-      const firstExcludedDay = new Date(relatedFutureTasks.at(-1)?.due ?? yesterday);
-      const tasksToCreateCount = Math.max(scheduledQuantity - relatedFutureUncompletedTasks.length, 0);
-      const daysSpan = 2000;
-      const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(firstExcludedDay, daysSpan, tasksToCreateCount, generator, "@default");
+      const calendarDayBefore = DayGs.dayjs(calendarDay).add(-1, "days").toDate();
+      const firstExcludedDay = new Date(lastRelatedFutureTaskDue ?? calendarDayBefore);
+      const tasksToCreateCount = Math.max(scheduledQuantity - relatedFutureTasksCount, 0);
+      const daysSpan = 800;
+      const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(firstExcludedDay, daysSpan, tasksToCreateCount, generator, taskListId);
       return { tasksIdsToRemove, tasksToCreateData };
     }).reduce(
       (
@@ -113,6 +102,33 @@ const setUpRun:
       },
     );
   };
+
+const analyzeRelatedTasks:
+  (relatedTasks: GoogleAppsScript.Tasks.Schema.Task[], calendarDay: Date) => {
+    lastRelatedFutureTaskDue: undefined | string,
+    relatedFutureTasksCount: number,
+    relatedPastCompletedTasks: GoogleAppsScript.Tasks.Schema.Task[],
+  } =
+  (relatedTasks, calendarDay) => {
+    const relatedFutureTasks = relatedTasks.filter(
+      ({ due }) =>
+        (due !== undefined ? (new Date(due)).getTime() : Infinity) >= calendarDay.getTime()
+    );
+    const relatedFutureUncompletedTasks = relatedFutureTasks.filter(
+      ({ completed }) =>
+        completed === undefined
+    );
+    const relatedPastCompletedTasks = relatedTasks.filter(
+      ({ completed, due }) =>
+        completed !== undefined
+        && (due !== undefined ? (new Date(due)).getTime() : Infinity) <= calendarDay.getTime()
+    );
+    return {
+      lastRelatedFutureTaskDue: relatedFutureTasks.at(-1)?.due,
+      relatedFutureTasksCount: relatedFutureUncompletedTasks.length,
+      relatedPastCompletedTasks,
+    };
+  }
 
 /**
  * A Google Apps Script trigger runs this function between
@@ -161,7 +177,7 @@ const sortExistingTasks:
 
 
 /**
- * Create a calendar date as a Date of format YYYY-MM-DDT00:00:00.000Z.
+ * Create a calendar day as a Date of format YYYY-MM-DDT00:00:00.000Z.
  * Indeed, due dates are represented this way in Tasks API, without timezone nor time of day data.
  * 
  * Time of day can be set and accessed through UI, but not through API.
@@ -173,7 +189,7 @@ const sortExistingTasks:
  * @param date 
  * @returns 
  */
-const formatCalendarDay:
+const buildCalendarDay:
   (date: Date) => Date =
   (date) => {
   const calendarDay = new Date(date);
