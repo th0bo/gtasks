@@ -1,7 +1,3 @@
-/// <reference types="drive-sheets" />
-
-declare const DriveSheets: DriveSheetsLibrary;
-
 namespace GeneratorsDriveSheets {
   export type Line = [string, string, string, string, number, number];
   const generatorsFileSheetRange = "A2:H";

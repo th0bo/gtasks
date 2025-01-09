@@ -1,5 +1,16 @@
 function myFunction() {
-  console.log(setUpRun(DayGs.dayjs(new Date()).add(1, "days").toDate()));
+  const taskListId = "@default";
+  const existingTasks = TasksTasks.listAllTasks(taskListId, {
+    showCompleted: true,
+    showHidden: true,
+  });
+  const now = new Date();
+  console.log(setUpRun(DayGs.dayjs(now).add(1, "days").toDate(), taskListId, existingTasks));
+  const saveUnscheduledTasksCount = () => {
+    const unscheduledTasksCount = existingTasks.filter(({ due, completed }) => due === undefined && completed === undefined).length;
+    DailyLogDriveSheets.save([[now.toISOString(), unscheduledTasksCount]]);
+  }
+  saveUnscheduledTasksCount();
 }
 
 const testEmojis = () => {
@@ -41,8 +52,8 @@ type RunSetUp = {
 };
 
 const setUpRun:
-  (date: Date) => RunSetUp =
-  (date) => {
+  (date: Date, taskListId: string, existingTasks: GoogleAppsScript.Tasks.Schema.Task[]) => RunSetUp =
+  (date, taskListId, existingTasks) => {
     const calendarDay = buildCalendarDay(date);
     const generators = [
       ...Object.values(
@@ -52,11 +63,6 @@ const setUpRun:
         )
       )
     ].map(convertLinesToGenerator);
-    const taskListId = "@default";
-    const existingTasks = TasksTasks.listAllTasks(taskListId, {
-      showCompleted: true,
-      showHidden: true,
-    });
     const titleToSortedExistingTasks = sortExistingTasks(existingTasks);
     return generators.map((generator) => {
       const {
@@ -136,7 +142,21 @@ const analyzeRelatedTasks:
  */
 const runEarly = () => {
   const errors: any[] = [];
-  const runSetUp = setUpRun(new Date());
+
+  const taskListId = "@default";
+  const existingTasks = TasksTasks.listAllTasks(taskListId, {
+    showCompleted: true,
+    showHidden: true,
+  });
+
+  const now = new Date();
+
+  const runSetUp = setUpRun(now, taskListId, existingTasks);
+
+  const saveUnscheduledTasksCount = () => {
+    const unscheduledTasksCount = existingTasks.filter(({ due, completed }) => due === undefined && completed === undefined).length;
+    DailyLogDriveSheets.save([[now.toISOString(), unscheduledTasksCount]]);
+  }
 
   const removeTasks = () => {
     for (const { id: taskId, listId } of runSetUp.tasksIdsToRemove) {
@@ -150,6 +170,7 @@ const runEarly = () => {
     }
   }
   const steps: Array<() => void> = [
+    saveUnscheduledTasksCount,
     removeTasks,
     createTasks,
   ];
