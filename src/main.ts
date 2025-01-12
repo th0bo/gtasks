@@ -5,12 +5,7 @@ function myFunction() {
     showHidden: true,
   });
   const now = new Date();
-  console.log(setUpRun(DayGs.dayjs(now).add(1, "days").toDate(), taskListId, existingTasks));
-  const saveUnscheduledTasksCount = () => {
-    const unscheduledTasksCount = existingTasks.filter(({ due, completed }) => due === undefined && completed === undefined).length;
-    DailyLogDriveSheets.save([[now.toISOString(), unscheduledTasksCount]]);
-  }
-  saveUnscheduledTasksCount();
+  console.log(computeCommandsToRun(DayGs.dayjs(now).add(1, "days").toDate(), taskListId, existingTasks));
 }
 
 const testEmojis = () => {
@@ -41,18 +36,8 @@ const testEmojis = () => {
   }
 }
 
-type TaskIds = {
-  id: string;
-  listId: string;
-}
-
-type RunSetUp = {
-  tasksIdsToRemove: TaskIds[];
-  tasksToCreateData: TaskGeneration.TaskData[];
-};
-
-const setUpRun:
-  (date: Date, taskListId: string, existingTasks: GoogleAppsScript.Tasks.Schema.Task[]) => RunSetUp =
+const computeCommandsToRun:
+  (date: Date, taskListId: string, existingTasks: GoogleAppsScript.Tasks.Schema.Task[]) => TasksCommands.Command[] =
   (date, taskListId, existingTasks) => {
     const calendarDay = buildCalendarDay(date);
     const generators = [
@@ -64,7 +49,7 @@ const setUpRun:
       )
     ].map(convertLinesToGenerator);
     const titleToSortedExistingTasks = sortExistingTasks(existingTasks);
-    return generators.map((generator) => {
+    const { tasksIdsToRemove, tasksToCreateData } = generators.map((generator) => {
       const {
         title,
         scheduledQuantity,
@@ -79,7 +64,7 @@ const setUpRun:
       } = analyzeRelatedTasks(relatedTasks, calendarDay);
       
       const tasksToRemove = retainedQuantity > 0 ? relatedPastCompletedTasks.slice(0, -1 * retainedQuantity) : relatedPastCompletedTasks;
-      const tasksIdsToRemove = tasksToRemove.map(({ id }) => ({ id, listId: taskListId })) as TaskIds[];
+      const tasksIdsToRemove = tasksToRemove.map(({ id }) => ({ taskId: id as string, listId: taskListId })) as TasksCommands.TaskId[];
       const calendarDayBefore = DayGs.dayjs(calendarDay).add(-1, "days").toDate();
       const firstExcludedDay = new Date(lastRelatedFutureTaskDue ?? calendarDayBefore);
       const tasksToCreateCount = Math.max(scheduledQuantity - relatedFutureTasksCount, 0);
@@ -107,6 +92,10 @@ const setUpRun:
         tasksToCreateData: [],
       },
     );
+    return [
+      ...tasksIdsToRemove.map((taskId) => ({ action: "DELETE", ...taskId } as TasksCommands.Command)),
+      ...tasksToCreateData.map((taskData) => ({ action: "CREATE", ...taskData } as TasksCommands.Command)),
+    ];
   };
 
 const analyzeRelatedTasks:
@@ -151,28 +140,20 @@ const runEarly = () => {
 
   const now = new Date();
 
-  const runSetUp = setUpRun(now, taskListId, existingTasks);
+  const commands = computeCommandsToRun(now, taskListId, existingTasks);
 
   const saveUnscheduledTasksCount = () => {
     const unscheduledTasksCount = existingTasks.filter(({ due, completed }) => due === undefined && completed === undefined).length;
     DailyLogDriveSheets.save([[now.toISOString(), unscheduledTasksCount]]);
   }
 
-  const removeTasks = () => {
-    for (const { id: taskId, listId } of runSetUp.tasksIdsToRemove) {
-      TasksTasks.getTasks().remove(listId, taskId);
-    }
+  const executeTasksCommands = () => {
+    TasksCommands.executeCommands(commands);
   }
-  const createTasks = () => {
-    for (const taskData of runSetUp.tasksToCreateData) {
-      const { newTask, taskListId } = buildTask(taskData);
-      TasksTasks.getTasks().insert(newTask, taskListId);
-    }
-  }
+
   const steps: Array<() => void> = [
     saveUnscheduledTasksCount,
-    removeTasks,
-    createTasks,
+    executeTasksCommands,
   ];
   for (const executeStep of steps) {
     try {
@@ -251,11 +232,4 @@ const convertLinesToGenerator:
       scheduledQuantity,
       retainedQuantity,
     };
-  };
-
-const buildTask:
-  (taskData: TaskGeneration.TaskData) => { newTask: GoogleAppsScript.Tasks.Schema.Task, taskListId: string } =
-  ({ taskListId, ...rest }) => {
-    const newTask = Object.assign(Tasks.newTask(), rest);
-    return { newTask, taskListId };
   };

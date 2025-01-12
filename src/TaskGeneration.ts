@@ -24,13 +24,6 @@ namespace TaskGeneration {
     recurrences: Array<{ notes: string } & Recurrence>;
   };
 
-  export type TaskData = {
-    title: string;
-    notes?: string;
-    due: string;
-    taskListId: string;
-  };
-
   /**
    * @param taskId Task ID made by concatenating the due date and the task generator ID and stored in the task notes
    * @returns Generator ID and due date
@@ -45,7 +38,7 @@ namespace TaskGeneration {
   const computeTask = (
     date: Date,
     { startDate, title, recurrences }: TaskGenerator,
-    taskListId: string,
+    listId: string,
   ) => {
     for (const { notes, ...recurrence } of recurrences) {
       if (checkRecurrence(date, startDate, recurrence)) {
@@ -53,7 +46,7 @@ namespace TaskGeneration {
           title, 
           notes,
           due: date.toISOString(),
-          taskListId,
+          listId,
         };
       }
     }
@@ -71,19 +64,19 @@ namespace TaskGeneration {
   };
 
   export const computeTasksForDaysInRange:
-    (firstExcludedDay: Date, daysRangeSize: number, tasksCount: number, taskGenerator: TaskGeneration.TaskGenerator, taskListId: string) => TaskData[] =
-    (firstExcludedDay, daysRangeSize, tasksCount, taskGenerator, taskListId) => {
-    const computedDailyTasks: TaskData[] = [];
+    (firstExcludedDay: Date, daysRangeSize: number, tasksCount: number, taskGenerator: TaskGeneration.TaskGenerator, taskListId: string) => TasksCommands.TaskData[] =
+    (firstExcludedDay, daysRangeSize, tasksCount, taskGenerator, listId) => {
+    const computedDailyTasks: TasksCommands.TaskData[] = [];
     if (daysRangeSize <= 0 || tasksCount <= 0) {
       return computedDailyTasks;
     }
     const firstIncludedDay = dayjs(firstExcludedDay).add(1, "day").toDate();
-    const computedTask = computeTask(firstIncludedDay, taskGenerator, taskListId);
+    const computedTask = computeTask(firstIncludedDay, taskGenerator, listId);
     const computedTasks =  computedTask ? [computedTask] : [];
 
     return [
       ...computedTasks,
-      ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, tasksCount - computedTasks.length, taskGenerator, taskListId),
+      ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, tasksCount - computedTasks.length, taskGenerator, listId),
     ];
   };
 
