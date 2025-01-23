@@ -38,10 +38,11 @@ namespace TaskGeneration {
   const computeTask = (
     date: Date,
     { startDate, title, recurrences }: TaskGenerator,
+    lastRelatedPastCompletedTaskDue: undefined | string,
     listId: string,
   ) => {
     for (const { notes, ...recurrence } of recurrences) {
-      if (checkRecurrence(date, startDate, recurrence)) {
+      if (checkRecurrence(date, lastRelatedPastCompletedTaskDue !== undefined ? new Date(lastRelatedPastCompletedTaskDue) : startDate, recurrence)) {
         return {
           title, 
           notes,
@@ -56,27 +57,42 @@ namespace TaskGeneration {
   export const computeTasks = (
     date: Date,
     tasksGenerators: TaskGenerator[],
+    lastRelatedPastCompletedTaskDue: undefined | string,
     taskListId: string,
   ) => {
     return tasksGenerators
-      .map((taskGenerator) => computeTask(date, taskGenerator, taskListId))
+      .map((taskGenerator) => computeTask(date, taskGenerator, lastRelatedPastCompletedTaskDue, taskListId))
       .filter((task) => task !== null);
   };
 
   export const computeTasksForDaysInRange:
-    (firstExcludedDay: Date, daysRangeSize: number, tasksCount: number, taskGenerator: TaskGeneration.TaskGenerator, taskListId: string) => TasksCommands.TaskData[] =
-    (firstExcludedDay, daysRangeSize, tasksCount, taskGenerator, listId) => {
+    (
+      firstExcludedDay: Date,
+      daysRangeSize: number,
+      tasksCount: number,
+      taskGenerator: TaskGeneration.TaskGenerator,
+      lastRelatedPastCompletedTaskDue: string | undefined,
+      taskListId: string,
+    ) => TasksCommands.TaskData[] =
+    (firstExcludedDay, daysRangeSize, tasksCount, taskGenerator, lastRelatedPastCompletedTaskDue, listId) => {
     const computedDailyTasks: TasksCommands.TaskData[] = [];
     if (daysRangeSize <= 0 || tasksCount <= 0) {
       return computedDailyTasks;
     }
     const firstIncludedDay = dayjs(firstExcludedDay).add(1, "day").toDate();
-    const computedTask = computeTask(firstIncludedDay, taskGenerator, listId);
+    const computedTask = computeTask(firstIncludedDay, taskGenerator, lastRelatedPastCompletedTaskDue, listId);
     const computedTasks =  computedTask ? [computedTask] : [];
 
     return [
       ...computedTasks,
-      ...TaskGeneration.computeTasksForDaysInRange(firstIncludedDay, daysRangeSize - 1, tasksCount - computedTasks.length, taskGenerator, listId),
+      ...TaskGeneration.computeTasksForDaysInRange(
+        firstIncludedDay,
+        daysRangeSize - 1,
+        tasksCount - computedTasks.length,
+        taskGenerator,
+        lastRelatedPastCompletedTaskDue,
+        listId,
+      ),
     ];
   };
 
@@ -90,10 +106,12 @@ namespace TaskGeneration {
     const dayA = dayjs(today).add(daysOffset * -1, "days");
     const dayB = dayjs(startDate);
 
-    const dayInterval = recurrence.dayInterval ?? 1;
-    const weekInterval = recurrence.weekInterval ?? 1;
-    const monthInterval = recurrence.monthInterval ?? 1;
-    const yearInterval = recurrence.yearInterval ?? 1;
+    const {
+      dayInterval,
+      weekInterval,
+      monthInterval,
+      yearInterval,
+     } = recurrence;
     const monthDays =
       recurrence.monthDays ?? Array.from({ length: 31 }).map((_v, key) => key);
     const weekDays =
@@ -115,11 +133,36 @@ namespace TaskGeneration {
     const monthDayIndex = dayA.date() - 1;
     const weekDayIndex = dayA.day();
 
+    const daysDiff = dayA.diff(dayB, "days");
+    const weeksDiff = dayA.diff(dayB, "weeks");
+    const monthsDiff = dayA.diff(dayB, "months");
+    const yearsDiff = dayA.diff(dayB, "years");
+
     return (
-      dayA.diff(dayB, "days") % dayInterval === 0 &&
-      dayA.diff(dayB, "weeks") % weekInterval === 0 &&
-      dayA.diff(dayB, "months") % monthInterval === 0 &&
-      dayA.diff(dayB, "years") % yearInterval === 0 &&
+      (
+        dayInterval === undefined || (
+          daysDiff > 0 &&
+          daysDiff % dayInterval === 0
+        )
+      ) &&
+      (
+        weekInterval === undefined || (
+          weeksDiff > 0 &&
+          weeksDiff % weekInterval === 0
+        )
+      ) &&
+      (
+        monthInterval === undefined || (
+          monthsDiff > 0 &&
+          monthsDiff % monthInterval === 0
+        )
+      ) &&
+      (
+        yearInterval === undefined || (
+          yearsDiff > 0 &&
+          yearsDiff % yearInterval === 0
+        )
+      ) &&
       (monthDays.includes(monthDayIndex) ||
         monthDays.includes(monthDayIndex * -1)) &&
       (weekDays.includes(weekDayIndex) ||

@@ -59,6 +59,7 @@ const computeCommandsToRun:
 
       const {
         lastRelatedFutureTaskDue,
+        lastRelatedTaskDue,
         relatedFutureTasksCount,
         relatedPastCompletedTasks,
       } = analyzeRelatedTasks(relatedTasks, calendarDay);
@@ -69,7 +70,14 @@ const computeCommandsToRun:
       const firstExcludedDay = new Date(lastRelatedFutureTaskDue ?? calendarDayBefore);
       const tasksToCreateCount = Math.max(scheduledQuantity - relatedFutureTasksCount, 0);
       const daysSpan = 800;
-      const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(firstExcludedDay, daysSpan, tasksToCreateCount, generator, taskListId);
+      const tasksToCreateData = TaskGeneration.computeTasksForDaysInRange(
+        firstExcludedDay,
+        daysSpan,
+        tasksToCreateCount,
+        generator,
+        lastRelatedTaskDue,
+        taskListId,
+      );
       return { tasksIdsToRemove, tasksToCreateData };
     }).reduce(
       (
@@ -101,6 +109,7 @@ const computeCommandsToRun:
 const analyzeRelatedTasks:
   (relatedTasks: GoogleAppsScript.Tasks.Schema.Task[], calendarDay: Date) => {
     lastRelatedFutureTaskDue: undefined | string,
+    lastRelatedTaskDue: undefined | string,
     relatedFutureTasksCount: number,
     relatedPastCompletedTasks: GoogleAppsScript.Tasks.Schema.Task[],
   } =
@@ -121,6 +130,7 @@ const analyzeRelatedTasks:
     return {
       lastRelatedFutureTaskDue: relatedFutureTasks.at(-1)?.due,
       relatedFutureTasksCount: relatedFutureUncompletedTasks.length,
+      lastRelatedTaskDue: relatedTasks.at(-1)?.due,
       relatedPastCompletedTasks,
     };
   }
